@@ -376,9 +376,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- [Report bugs](https://github.com/tadeoaragoon/fast-schema/issues)
-- [Request features](https://github.com/tadeoaragoon/fast-schema/issues)
-- [View source](https://github.com/tadeoaragoon/fast-schema)
+- [Report bugs](https://github.com/TadeooA/fast-schema/issues)
+- [Request features](https://github.com/TadeooA/fast-schema/issues)
+- [View source](https://github.com/TadeooA/fast-schema)
 
 ---
 
