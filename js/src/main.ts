@@ -12,8 +12,13 @@ import {
   IntersectionSchema,
   RefinementSchema,
   TransformSchema,
+  AsyncRefinementSchema,
   ValidationError,
   ValidationIssue,
+  AsyncValidationOptions,
+  AsyncRefinementFunction,
+  AsyncRefinementConfig,
+  AsyncCacheConfig,
   HtmlElementType,
   AccessibilityLevel,
   HtmlProps,
@@ -22,7 +27,14 @@ import {
 } from './core';
 
 // Core exports - Fast-Schema's clean API
-export { ValidationError, ValidationIssue };
+export {
+  ValidationError,
+  ValidationIssue,
+  AsyncValidationOptions,
+  AsyncRefinementFunction,
+  AsyncRefinementConfig,
+  AsyncCacheConfig
+};
 
 // Type inference helpers - Fast-Schema's TypeScript magic
 export type infer<T extends Schema<any>> = T['_output'];

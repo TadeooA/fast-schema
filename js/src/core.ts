@@ -114,6 +114,35 @@ export interface ValidationIssue {
   expected?: string;
 }
 
+// Async validation types
+export interface AsyncValidationOptions {
+  signal?: AbortSignal;
+  timeout?: number;
+  debounce?: number;
+  cache?: boolean;
+  retries?: number;
+}
+
+export type AsyncRefinementFunction<T> = (
+  value: T,
+  ctx?: { signal?: AbortSignal }
+) => Promise<boolean>;
+
+export interface AsyncRefinementConfig {
+  message?: string;
+  debounce?: number;
+  cache?: boolean | AsyncCacheConfig;
+  timeout?: number;
+  retries?: number;
+  cancelPrevious?: boolean;
+}
+
+export interface AsyncCacheConfig {
+  maxSize?: number;
+  ttl?: number;
+  strategy?: 'lru' | 'fifo';
+}
+
 // Base schema class
 export abstract class Schema<Output = any, Input = Output> {
   readonly _type!: Output;
@@ -156,16 +185,35 @@ export abstract class Schema<Output = any, Input = Output> {
     }
   }
 
-  // Async versions for compatibility
-  async parseAsync(data: unknown): Promise<Output> {
-    return this.parse(data);
+  // Async parsing methods with real async support
+  async parseAsync(data: unknown, options?: AsyncValidationOptions): Promise<Output> {
+    const result = await this.safeParseAsync(data, options);
+    if (!result.success) {
+      throw result.error;
+    }
+    return result.data;
   }
 
-  async safeParseAsync(data: unknown): Promise<
+  async safeParseAsync(data: unknown, options?: AsyncValidationOptions): Promise<
     | { success: true; data: Output }
     | { success: false; error: ValidationError }
   > {
-    return this.safeParse(data);
+    try {
+      const validated = await this._validateAsync(data, options);
+      return { success: true, data: validated };
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return { success: false, error };
+      }
+      return {
+        success: false,
+        error: new ValidationError([{
+          code: 'custom',
+          path: [],
+          message: error instanceof Error ? error.message : 'Async validation failed'
+        }])
+      };
+    }
   }
 
   // Schema modification methods
@@ -203,6 +251,29 @@ export abstract class Schema<Output = any, Input = Output> {
     return new RefinementSchema(this, predicate, message);
   }
 
+  // Async refinement methods
+  refineAsync(
+    predicate: AsyncRefinementFunction<Output>,
+    config?: string | AsyncRefinementConfig
+  ): AsyncRefinementSchema<this> {
+    const finalConfig = typeof config === 'string'
+      ? { message: config }
+      : (config || {});
+
+    return new AsyncRefinementSchema(this, predicate, finalConfig);
+  }
+
+  superRefineAsync(
+    predicate: AsyncRefinementFunction<Output>,
+    config?: string | AsyncRefinementConfig
+  ): AsyncRefinementSchema<this> {
+    const finalConfig = typeof config === 'string'
+      ? { message: config }
+      : (config || {});
+
+    return new AsyncRefinementSchema(this, predicate, finalConfig);
+  }
+
   // Transform method
   transform<U>(transformer: (data: any) => U): TransformSchema<this, U> {
     return new TransformSchema(this, transformer);
@@ -218,6 +289,11 @@ export abstract class Schema<Output = any, Input = Output> {
 
   // Internal validation method to be implemented by subclasses
   protected abstract _validate(data: unknown): Output;
+
+  // Internal async validation method - default implementation calls sync version
+  protected async _validateAsync(data: unknown, options?: AsyncValidationOptions): Promise<Output> {
+    return this._validate(data);
+  }
 
   // Get the internal schema representation
   getSchema(): any {
@@ -917,6 +993,211 @@ export class TransformSchema<Input extends Schema<any>, Output> extends Schema<O
   protected _validate(data: unknown): Output {
     const inputResult = this.inputSchema._validate(data);
     return this.transformer(inputResult);
+  }
+}
+
+// Async refinement type for async validation
+export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_output']> {
+  private cache = new Map<string, { result: boolean; timestamp: number }>();
+  private activeRequests = new Map<string, Promise<boolean>>();
+
+  constructor(
+    private baseSchema: T,
+    private predicate: AsyncRefinementFunction<T['_output']>,
+    private config: AsyncRefinementConfig = {}
+  ) {
+    super({
+      type: 'async_refinement',
+      base: baseSchema.getSchema(),
+      config
+    });
+  }
+
+  protected _validate(data: unknown): T['_output'] {
+    throw new ValidationError([{
+      code: 'async_required',
+      path: [],
+      message: 'This schema requires async validation. Use parseAsync() or safeParseAsync()'
+    }]);
+  }
+
+  protected async _validateAsync(data: unknown, options?: AsyncValidationOptions): Promise<T['_output']> {
+    // First validate with base schema
+    const baseResult = await this.baseSchema._validateAsync(data, options);
+
+    // Create cache key
+    const cacheKey = JSON.stringify(baseResult);
+
+    // Check cache if enabled
+    if (this.config.cache && this.isValidCacheEntry(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (cached && cached.result) {
+        return baseResult;
+      } else if (cached && !cached.result) {
+        throw new ValidationError([{
+          code: 'custom',
+          path: [],
+          message: this.config.message || 'Async refinement failed'
+        }]);
+      }
+    }
+
+    // Check for existing request to prevent duplicate calls
+    if (this.config.cancelPrevious && this.activeRequests.has(cacheKey)) {
+      const existingRequest = this.activeRequests.get(cacheKey)!;
+      try {
+        const result = await existingRequest;
+        return this.processAsyncResult(result, baseResult, cacheKey);
+      } catch (error) {
+        this.activeRequests.delete(cacheKey);
+        throw error;
+      }
+    }
+
+    // Create async validation request
+    const validationPromise = this.executeAsyncValidation(baseResult, options);
+
+    if (this.config.cancelPrevious) {
+      this.activeRequests.set(cacheKey, validationPromise);
+    }
+
+    try {
+      const result = await validationPromise;
+      return this.processAsyncResult(result, baseResult, cacheKey);
+    } finally {
+      if (this.config.cancelPrevious) {
+        this.activeRequests.delete(cacheKey);
+      }
+    }
+  }
+
+  private async executeAsyncValidation(
+    value: T['_output'],
+    options?: AsyncValidationOptions
+  ): Promise<boolean> {
+    const controller = new AbortController();
+    const timeoutMs = options?.timeout || this.config.timeout || 5000;
+
+    // Set up timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      // Add signal to context
+      const ctx = { signal: controller.signal };
+
+      // Execute with retries if configured
+      const maxRetries = this.config.retries || 0;
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          if (controller.signal.aborted) {
+            throw new Error('Validation aborted');
+          }
+
+          const result = await this.predicate(value, ctx);
+          clearTimeout(timeoutId);
+          return result;
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error(String(error));
+
+          if (attempt < maxRetries && !controller.signal.aborted) {
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+            continue;
+          }
+
+          throw lastError;
+        }
+      }
+
+      throw lastError || new Error('Async validation failed');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private processAsyncResult(
+    result: boolean,
+    baseResult: T['_output'],
+    cacheKey: string
+  ): T['_output'] {
+    // Cache result if enabled
+    if (this.config.cache) {
+      this.cache.set(cacheKey, {
+        result,
+        timestamp: Date.now()
+      });
+      this.cleanupCache();
+    }
+
+    if (!result) {
+      throw new ValidationError([{
+        code: 'custom',
+        path: [],
+        message: this.config.message || 'Async refinement failed'
+      }]);
+    }
+
+    return baseResult;
+  }
+
+  private isValidCacheEntry(key: string): boolean {
+    if (!this.config.cache) return false;
+
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+
+    const cacheConfig = typeof this.config.cache === 'object' ? this.config.cache : {};
+    const ttl = cacheConfig.ttl || 300000; // 5 minutes default
+
+    return Date.now() - entry.timestamp < ttl;
+  }
+
+  private cleanupCache(): void {
+    if (!this.config.cache || typeof this.config.cache !== 'object') return;
+
+    const cacheConfig = this.config.cache;
+    const maxSize = cacheConfig.maxSize || 1000;
+    const ttl = cacheConfig.ttl || 300000;
+    const now = Date.now();
+
+    // Remove expired entries
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > ttl) {
+        this.cache.delete(key);
+      }
+    }
+
+    // Enforce max size
+    if (this.cache.size > maxSize) {
+      const entries = Array.from(this.cache.entries());
+      const strategy = cacheConfig.strategy || 'lru';
+
+      if (strategy === 'lru') {
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      }
+
+      const toRemove = this.cache.size - maxSize;
+      for (let i = 0; i < toRemove; i++) {
+        this.cache.delete(entries[i][0]);
+      }
+    }
+  }
+
+  // Clear cache manually
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  // Get cache stats for monitoring
+  getCacheStats(): { hits: number; misses: number; size: number } {
+    // This is a simplified version - in production you'd track hits/misses
+    return {
+      hits: 0, // Would need to track this
+      misses: 0, // Would need to track this
+      size: this.cache.size
+    };
   }
 }
 
