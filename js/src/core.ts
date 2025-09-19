@@ -1612,7 +1612,8 @@ export class ObjectSchema<T extends Record<string, Schema<any>>> extends Schema<
   // Get keys as a literal union schema
   keyof(): Schema<keyof T> {
     const keys = Object.keys(this.shape) as (keyof T)[];
-    return new Schema<keyof T>({ type: 'keyof', keys }) {
+
+    class KeyofSchema extends Schema<keyof T> {
       protected _validate(data: unknown): keyof T {
         if (typeof data !== 'string' || !keys.includes(data as keyof T)) {
           throw new ValidationError([{
@@ -1625,7 +1626,9 @@ export class ObjectSchema<T extends Record<string, Schema<any>>> extends Schema<
         }
         return data as keyof T;
       }
-    };
+    }
+
+    return new KeyofSchema({ type: 'keyof', keys });
   }
 
   // Required - opposite of partial
