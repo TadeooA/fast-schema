@@ -19,6 +19,11 @@ import {
   AsyncRefinementFunction,
   AsyncRefinementConfig,
   AsyncCacheConfig,
+  DebouncedAsyncFunction,
+  ValidationDebounceManager,
+  globalDebounceManager,
+  createDebouncedValidator,
+  debounceAsyncFunction,
   HtmlElementType,
   AccessibilityLevel,
   HtmlProps,
@@ -33,7 +38,12 @@ export {
   AsyncValidationOptions,
   AsyncRefinementFunction,
   AsyncRefinementConfig,
-  AsyncCacheConfig
+  AsyncCacheConfig,
+  DebouncedAsyncFunction,
+  ValidationDebounceManager,
+  globalDebounceManager,
+  createDebouncedValidator,
+  debounceAsyncFunction
 };
 
 // Type inference helpers - Fast-Schema's TypeScript magic
