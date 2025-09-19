@@ -6,6 +6,19 @@ import { NumberSchema } from './primitives/number';
 import { BooleanSchema, NullSchema, UndefinedSchema, AnySchema, UnknownSchema, NeverSchema } from './primitives/index';
 import { ArraySchema } from './complex/array';
 import { ObjectSchema } from './complex/object';
+import { IntersectionSchema } from './advanced/intersection';
+import { ConditionalSchema, conditional } from './advanced/conditional';
+import { AsyncSchema, PromiseSchema } from './advanced/async';
+import { AdvancedStringSchema } from './advanced/formats';
+import { JITSchema, BatchValidator } from './advanced/performance';
+import {
+  makeDeepPartial,
+  makeRequired,
+  makeReadonly,
+  makeNonNullable,
+  keyof as keyofHelper,
+  DiscriminatedUnionSchema
+} from './advanced/composition';
 
 // Union schema for multiple type options
 export class UnionSchema<T extends [Schema<any>, Schema<any>, ...Schema<any>[]]> extends Schema<T[number]['_output']> {
@@ -101,8 +114,15 @@ export const z = {
 
   // Union and literal types
   union: <T extends [Schema<any>, Schema<any>, ...Schema<any>[]]>(schemas: T) => new UnionSchema(schemas),
+  intersection: <A, B>(schemaA: Schema<A>, schemaB: Schema<B>) => new IntersectionSchema(schemaA, schemaB),
   literal: <T extends string | number | boolean | null>(value: T) => new LiteralSchema(value),
   enum: <T extends [string, ...string[]]>(values: T) => new EnumSchema(values),
+
+  // Advanced types
+  discriminatedUnion: <T extends Record<string, any>>(
+    discriminator: keyof T,
+    schemas: Array<ObjectSchema<T>>
+  ) => new DiscriminatedUnionSchema(discriminator, schemas),
 
   // Utility functions
   coerce: {
@@ -111,6 +131,27 @@ export const z = {
     boolean: () => new BooleanSchema().transform((data: any) => Boolean(data)),
     date: () => new StringSchema().transform((data: string) => new Date(data))
   },
+
+  // Schema composition utilities
+  deepPartial: <T>(schema: Schema<T>) => makeDeepPartial(schema),
+  required: <T extends Record<string, any>>(schema: ObjectSchema<T>) => makeRequired(schema),
+  readonly: <T>(schema: Schema<T>) => makeReadonly(schema),
+  nonNullable: <T>(schema: Schema<T>) => makeNonNullable(schema),
+  keyof: <T extends Record<string, any>>(schema: ObjectSchema<T>) => keyofHelper(schema),
+
+  // Conditional validation
+  conditional: conditional,
+
+  // Performance utilities
+  jit: <T>(schema: Schema<T>) => new JITSchema(schema),
+  batch: <T>(schema: Schema<T>) => new BatchValidator(schema),
+
+  // Advanced string with extended formats
+  advancedString: () => new AdvancedStringSchema(),
+
+  // Async validation
+  async: <T>(validator: (data: unknown) => Promise<T>) => new AsyncSchema(validator),
+  promise: <T>(schema: Schema<T>) => new PromiseSchema(schema),
 
   // Type utilities
   instanceof: <T extends new (...args: any[]) => any>(ctor: T) => {

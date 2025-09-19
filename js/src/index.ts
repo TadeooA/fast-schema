@@ -16,6 +16,30 @@ export { UnionSchema, LiteralSchema, EnumSchema } from './api';
 // Export utility classes
 export { OptionalSchema, NullableSchema, DefaultSchema, RefinementSchema, TransformSchema } from './base/schema';
 
+// Export advanced features
+export {
+  IntersectionSchema,
+  ConditionalSchema,
+  AsyncSchema,
+  AsyncRefinementSchema,
+  PromiseSchema,
+  AdvancedStringSchema,
+  StringFormats,
+  RegexCache,
+  SchemaCache,
+  ValidationPool,
+  JITSchema,
+  BatchValidator,
+  StreamingValidator,
+  DeepPartialSchema,
+  RequiredSchema,
+  ReadonlySchema,
+  NonNullableSchema,
+  KeyofSchema,
+  SchemaMerger,
+  DiscriminatedUnionSchema
+} from './advanced/index';
+
 // Compatibility exports for easy migration
 export const ZodError = ValidationError;
 export type ZodType<T = any> = Schema<T>;
