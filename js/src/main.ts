@@ -28,7 +28,12 @@ import {
   AccessibilityLevel,
   HtmlProps,
   ReactComponentSchema,
-  ReactElement
+  ReactElement,
+  BatchValidator,
+  BatchValidationItem,
+  BatchValidationOptions,
+  BatchValidationResult,
+  BatchValidationStats
 } from './core';
 
 // Core exports - Fast-Schema's clean API
@@ -43,7 +48,12 @@ export {
   ValidationDebounceManager,
   globalDebounceManager,
   createDebouncedValidator,
-  debounceAsyncFunction
+  debounceAsyncFunction,
+  BatchValidator,
+  BatchValidationItem,
+  BatchValidationOptions,
+  BatchValidationResult,
+  BatchValidationStats
 };
 
 // Type inference helpers - Fast-Schema's TypeScript magic
@@ -500,6 +510,28 @@ export const z = {
         return data as InstanceType<T>;
       }
     };
+  },
+
+  // Batch validation methods
+  batchValidateAsync: async <T extends BatchValidationItem[]>(
+    items: T,
+    options?: BatchValidationOptions
+  ): Promise<{ [K in keyof T]: BatchValidationResult<T[K] extends BatchValidationItem<infer U> ? U : any> }> => {
+    const validator = new BatchValidator(options);
+    return validator.validateAsync(items, options) as Promise<any>;
+  },
+
+  createBatchValidator: (options?: BatchValidationOptions): BatchValidator => {
+    return new BatchValidator(options);
+  },
+
+  // Utility to create batch items from schema and data array
+  createBatch: <T>(
+    schema: Schema<T>,
+    dataArray: unknown[],
+    idGenerator?: (index: number, data: unknown) => string | number
+  ): BatchValidationItem<T>[] => {
+    return BatchValidator.createBatch(schema, dataArray, idGenerator);
   }
 };
 

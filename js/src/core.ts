@@ -1280,6 +1280,234 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
   }
 }
 
+// Batch validation interfaces and types
+export interface BatchValidationItem<T = any> {
+  schema: Schema<T>;
+  data: unknown;
+  id?: string | number;
+}
+
+export interface BatchValidationOptions {
+  maxConcurrency?: number;
+  stopOnFirstError?: boolean;
+  timeout?: number;
+  abortSignal?: AbortSignal;
+}
+
+export interface BatchValidationResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: ValidationError;
+  id?: string | number;
+  duration?: number;
+}
+
+export interface BatchValidationStats {
+  total: number;
+  successful: number;
+  failed: number;
+  duration: number;
+  avgItemDuration: number;
+  maxConcurrency: number;
+}
+
+// Batch validator class for efficient concurrent validation
+export class BatchValidator {
+  private defaultOptions: BatchValidationOptions = {
+    maxConcurrency: 5,
+    stopOnFirstError: false,
+    timeout: 10000
+  };
+
+  constructor(options?: Partial<BatchValidationOptions>) {
+    this.defaultOptions = { ...this.defaultOptions, ...options };
+  }
+
+  async validateAsync<T extends any[]>(
+    items: { [K in keyof T]: BatchValidationItem<T[K]> },
+    options?: BatchValidationOptions
+  ): Promise<{ [K in keyof T]: BatchValidationResult<T[K]> }>;
+  async validateAsync(
+    items: BatchValidationItem[],
+    options?: BatchValidationOptions
+  ): Promise<BatchValidationResult[]>;
+  async validateAsync(
+    items: BatchValidationItem[] | any,
+    options?: BatchValidationOptions
+  ): Promise<BatchValidationResult[] | any> {
+    const finalOptions = { ...this.defaultOptions, ...options };
+    const startTime = Date.now();
+
+    // Handle AbortController timeout
+    const controller = new AbortController();
+    const timeoutId = finalOptions.timeout ? setTimeout(() => {
+      controller.abort();
+    }, finalOptions.timeout) : null;
+
+    // Combine external abort signal with timeout signal
+    if (finalOptions.abortSignal) {
+      finalOptions.abortSignal.addEventListener('abort', () => {
+        controller.abort();
+      });
+    }
+
+    try {
+      const results = await this.processBatch(items, finalOptions, controller.signal);
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      return results;
+    } catch (error) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      throw error;
+    }
+  }
+
+  private async processBatch(
+    items: BatchValidationItem[],
+    options: BatchValidationOptions,
+    abortSignal: AbortSignal
+  ): Promise<BatchValidationResult[]> {
+    const results: BatchValidationResult[] = new Array(items.length);
+    const maxConcurrency = options.maxConcurrency || 5;
+
+    // Create a semaphore for concurrency control
+    const semaphore = new Array(maxConcurrency).fill(null);
+    let index = 0;
+
+    // Process items with controlled concurrency
+    const processItem = async (itemIndex: number): Promise<void> => {
+      if (abortSignal.aborted) {
+        throw new Error('Batch validation aborted');
+      }
+
+      const item = items[itemIndex];
+      const itemStartTime = Date.now();
+
+      try {
+        // Validate the item with the provided schema
+        let result: any;
+        if (item.schema._validateAsync) {
+          result = await item.schema._validateAsync(item.data);
+        } else {
+          result = item.schema._validate(item.data);
+        }
+
+        results[itemIndex] = {
+          success: true,
+          data: result,
+          id: item.id,
+          duration: Date.now() - itemStartTime
+        };
+      } catch (error) {
+        const validationError = error instanceof ValidationError
+          ? error
+          : new ValidationError([{
+              code: 'unknown',
+              path: [],
+              message: error instanceof Error ? error.message : 'Unknown validation error'
+            }]);
+
+        results[itemIndex] = {
+          success: false,
+          error: validationError,
+          id: item.id,
+          duration: Date.now() - itemStartTime
+        };
+
+        // Stop on first error if configured
+        if (options.stopOnFirstError) {
+          throw validationError;
+        }
+      }
+    };
+
+    // Create worker promises that process items from the queue
+    const workers = semaphore.map(async () => {
+      while (index < items.length && !abortSignal.aborted) {
+        const currentIndex = index++;
+        if (currentIndex < items.length) {
+          await processItem(currentIndex);
+        }
+      }
+    });
+
+    // Wait for all workers to complete
+    await Promise.all(workers);
+
+    if (abortSignal.aborted) {
+      throw new Error('Batch validation aborted');
+    }
+
+    return results;
+  }
+
+  async validateMixed(
+    items: Array<{ schema: Schema<any>; data: unknown; id?: string | number }>
+  ): Promise<BatchValidationResult[]> {
+    return this.validateAsync(items);
+  }
+
+  getStats(results: BatchValidationResult[]): BatchValidationStats {
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
+    const totalDuration = results.reduce((sum, r) => sum + (r.duration || 0), 0);
+
+    return {
+      total: results.length,
+      successful,
+      failed,
+      duration: totalDuration,
+      avgItemDuration: totalDuration / results.length,
+      maxConcurrency: this.defaultOptions.maxConcurrency || 5
+    };
+  }
+
+  // Utility method to create batches from arrays of data
+  static createBatch<T>(
+    schema: Schema<T>,
+    dataArray: unknown[],
+    idGenerator?: (index: number, data: unknown) => string | number
+  ): BatchValidationItem<T>[] {
+    return dataArray.map((data, index) => ({
+      schema,
+      data,
+      id: idGenerator ? idGenerator(index, data) : index
+    }));
+  }
+
+  // Utility method to group results by success/failure
+  static groupResults(results: BatchValidationResult[]): {
+    successful: Array<{ data: any; id?: string | number; duration?: number }>;
+    failed: Array<{ error: ValidationError; id?: string | number; duration?: number }>;
+  } {
+    const successful: Array<{ data: any; id?: string | number; duration?: number }> = [];
+    const failed: Array<{ error: ValidationError; id?: string | number; duration?: number }> = [];
+
+    for (const result of results) {
+      if (result.success) {
+        successful.push({
+          data: result.data,
+          id: result.id,
+          duration: result.duration
+        });
+      } else {
+        failed.push({
+          error: result.error!,
+          id: result.id,
+          duration: result.duration
+        });
+      }
+    }
+
+    return { successful, failed };
+  }
+}
+
 // Debouncing utility for async validation
 class DebouncedAsyncFunction<T extends any[], R> {
   private timeoutId: NodeJS.Timeout | null = null;
