@@ -20,6 +20,18 @@ Fast-Schema is an experimental validation library that combines the performance 
 
 ### Installation
 
+#### From GitHub Packages
+
+```bash
+# Configure npm to use GitHub Packages for @tadeooa scope
+echo "@tadeooa:registry=https://npm.pkg.github.com" >> .npmrc
+
+# Install the package
+npm install @tadeooa/fast-schema
+```
+
+#### From NPM (Coming Soon)
+
 ```bash
 npm install fast-schema
 ```
@@ -27,7 +39,8 @@ npm install fast-schema
 ### Basic Usage
 
 ```javascript
-import { z, ValidationError, infer } from 'fast-schema';
+import { z, ValidationError } from '@tadeooa/fast-schema';
+// or const { z, ValidationError } = require('@tadeooa/fast-schema');
 
 const userSchema = z.object({
   name: z.string().min(2).max(50),

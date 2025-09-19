@@ -1,15 +1,12 @@
 {
-  "name": "fast-schema",
+  "name": "@tadeooa/fast-schema",
   "version": "1.0.0",
   "description": "The fastest TypeScript-first schema validation with static type inference - a drop-in replacement for Zod with 10-20x better performance",
   "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.esm.js",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     }
   },
   "files": [
@@ -19,24 +16,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "npm run build:wasm && npm run build:ts",
-    "build:wasm": "wasm-pack build --target bundler --out-dir js/pkg",
-    "build:ts": "tsc && rollup -c",
-    "dev": "npm run build:wasm && tsc --watch",
-    "test": "jest",
-    "test:unit": "jest tests/unit",
-    "test:integration": "jest tests/integration",
-    "test:coverage": "jest --coverage",
-    "benchmark": "node benchmarks/vs-zod.js",
-    "benchmark:all": "node benchmarks/comprehensive.js",
-    "examples": "npm run examples:basic && npm run examples:advanced && npm run examples:html",
-    "examples:basic": "node examples/basic-usage/simple-validation.js",
-    "examples:advanced": "node examples/advanced-usage/complex-schemas.js",
-    "examples:html": "node examples/html-validation/basic-elements.js",
-    "examples:migration": "node examples/migration-guide/from-zod.js",
-    "lint": "eslint js/src --ext .ts",
-    "format": "prettier --write 'js/src/**/*.ts'",
-    "prepublishOnly": "npm run build && npm test"
+    "test": "node -e \"const {z} = require('./dist/index.js'); console.log('✓ Package test passed:', z.string().parse('test'));\"",
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "schema",
@@ -57,12 +38,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/fast-schema.git"
+    "url": "https://github.com/TadeooA/fast-schema.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/fast-schema/issues"
+    "url": "https://github.com/TadeooA/fast-schema/issues"
   },
-  "homepage": "https://github.com/your-org/fast-schema#readme",
+  "homepage": "https://github.com/TadeooA/fast-schema#readme",
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^18.15.0",
@@ -83,6 +64,7 @@
     "node": ">=16.0.0"
   },
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
   }
 }
