@@ -1,6 +1,20 @@
 // Main API - the `z` object that users interact with
 import { ValidationError } from './base/types';
 import { Schema } from './base/schema';
+
+// WASM integration imports (optional - will gracefully degrade if not available)
+let wasmModule: any = null;
+try {
+  // Dynamic import to avoid breaking when WASM is not available
+  import('./wasm/index').then(module => {
+    wasmModule = module;
+    console.log('WASM module loaded successfully');
+  }).catch(() => {
+    // WASM not available - continue with TypeScript only
+  });
+} catch {
+  // WASM not available
+}
 import { StringSchema } from './primitives/string';
 import { NumberSchema } from './primitives/number';
 import { BooleanSchema, NullSchema, UndefinedSchema, AnySchema, UnknownSchema, NeverSchema } from './primitives/index';
@@ -196,6 +210,64 @@ export const z = {
       }
     }
     return new CustomSchema({ type: 'custom' });
+  },
+
+  // WASM integration utilities (when available)
+  wasm: {
+    isAvailable: () => wasmModule?.FastSchemaWasm?.isAvailable() || false,
+
+    test: async () => {
+      if (wasmModule?.testWasmIntegration) {
+        return wasmModule.testWasmIntegration();
+      }
+      return { wasmAvailable: false, wasmWorking: false, error: 'WASM module not loaded' };
+    },
+
+    hybridize: <T>(schema: Schema<T>) => {
+      if (wasmModule?.hybridize) {
+        return wasmModule.hybridize(schema);
+      }
+      console.warn('WASM not available, returning original schema');
+      return schema;
+    },
+
+    optimize: <T>(schema: Schema<T>) => {
+      if (wasmModule?.smartSchema) {
+        return wasmModule.smartSchema(schema);
+      }
+      console.warn('WASM optimization not available, returning original schema');
+      return schema;
+    },
+
+    benchmark: async <T>(schema: Schema<T>, testData: unknown[], iterations = 100) => {
+      if (wasmModule?.FastSchemaWasm?.benchmark) {
+        return wasmModule.FastSchemaWasm.benchmark(schema, testData, iterations);
+      }
+      throw new Error('WASM benchmarking not available');
+    },
+
+    configure: (config: any) => {
+      if (wasmModule?.FastSchemaWasm?.configure) {
+        wasmModule.FastSchemaWasm.configure(config);
+      } else {
+        console.warn('WASM configuration not available');
+      }
+    },
+
+    getMetrics: () => {
+      if (wasmModule?.FastSchemaWasm?.getMetrics) {
+        return wasmModule.FastSchemaWasm.getMetrics();
+      }
+      return null;
+    },
+
+    resetCaches: () => {
+      if (wasmModule?.FastSchemaWasm?.resetCaches) {
+        wasmModule.FastSchemaWasm.resetCaches();
+      } else {
+        console.warn('WASM cache reset not available');
+      }
+    }
   }
 };
 

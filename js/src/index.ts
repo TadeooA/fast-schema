@@ -40,6 +40,10 @@ export {
   DiscriminatedUnionSchema
 } from './advanced/index';
 
+// Export WASM features (optional - will gracefully degrade if not available)
+export type { HybridConfig, WasmZ } from './wasm/index';
+export { FastSchemaWasm } from './wasm/index';
+
 // Compatibility exports for easy migration
 export const ZodError = ValidationError;
 export type ZodType<T = any> = Schema<T>;
