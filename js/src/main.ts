@@ -33,7 +33,50 @@ import {
   BatchValidationItem,
   BatchValidationOptions,
   BatchValidationResult,
-  BatchValidationStats
+  BatchValidationStats,
+  ValidationEventEmitter,
+  ValidationMonitor,
+  globalValidationMonitor,
+  ValidationEvent,
+  ValidationEventType,
+  ValidationEventListener,
+  ValidationStartEvent,
+  ValidationSuccessEvent,
+  ValidationErrorEvent,
+  ValidationCacheEvent,
+  AsyncValidationStartEvent,
+  AsyncValidationCompleteEvent,
+  BatchValidationStartEvent,
+  BatchValidationCompleteEvent,
+  BatchItemValidationEvent,
+  PerformanceEvent,
+  DebugEvent,
+  RegexCache,
+  SchemaCache,
+  ValidationPool,
+  PerformanceStats,
+  JITConfig,
+  ConditionalValidationRule,
+  ValidationContext,
+  CustomValidatorFunction,
+  CustomValidatorConfig,
+  ConditionalSchema,
+  CustomValidationSchema,
+  SchemaGenerator,
+  DynamicSchema,
+  SchemaMetadata,
+  IntrospectableSchema,
+  SerializedSchema,
+  SchemaSerializer,
+  SchemaMigration,
+  VersionedSchema,
+  ValidationErrorWithContext,
+  ContextualValidator,
+  createConditionalSchema,
+  createCustomValidator,
+  createDynamicSchema,
+  introspect,
+  createVersionedSchema
 } from './core';
 
 // Core exports - Fast-Schema's clean API
@@ -53,7 +96,50 @@ export {
   BatchValidationItem,
   BatchValidationOptions,
   BatchValidationResult,
-  BatchValidationStats
+  BatchValidationStats,
+  ValidationEventEmitter,
+  ValidationMonitor,
+  globalValidationMonitor,
+  ValidationEvent,
+  ValidationEventType,
+  ValidationEventListener,
+  ValidationStartEvent,
+  ValidationSuccessEvent,
+  ValidationErrorEvent,
+  ValidationCacheEvent,
+  AsyncValidationStartEvent,
+  AsyncValidationCompleteEvent,
+  BatchValidationStartEvent,
+  BatchValidationCompleteEvent,
+  BatchItemValidationEvent,
+  PerformanceEvent,
+  DebugEvent,
+  RegexCache,
+  SchemaCache,
+  ValidationPool,
+  PerformanceStats,
+  JITConfig,
+  ConditionalValidationRule,
+  ValidationContext,
+  CustomValidatorFunction,
+  CustomValidatorConfig,
+  ConditionalSchema,
+  CustomValidationSchema,
+  SchemaGenerator,
+  DynamicSchema,
+  SchemaMetadata,
+  IntrospectableSchema,
+  SerializedSchema,
+  SchemaSerializer,
+  SchemaMigration,
+  VersionedSchema,
+  ValidationErrorWithContext,
+  ContextualValidator,
+  createConditionalSchema,
+  createCustomValidator,
+  createDynamicSchema,
+  introspect,
+  createVersionedSchema
 };
 
 // Type inference helpers - Fast-Schema's TypeScript magic
@@ -532,6 +618,44 @@ export const z = {
     idGenerator?: (index: number, data: unknown) => string | number
   ): BatchValidationItem<T>[] => {
     return BatchValidator.createBatch(schema, dataArray, idGenerator);
+  },
+
+  // Advanced validation features
+  conditional: <T>(defaultSchema?: Schema<T>): ConditionalSchema<T> => {
+    return createConditionalSchema(defaultSchema);
+  },
+
+  custom: <T>(baseSchema?: Schema<T>): CustomValidationSchema<T> => {
+    return createCustomValidator(baseSchema);
+  },
+
+  dynamic: <T>(generator: SchemaGenerator<T>): DynamicSchema<T> => {
+    return createDynamicSchema(generator);
+  },
+
+  introspect: <T>(schema: Schema<T>, metadata?: Partial<SchemaMetadata>): IntrospectableSchema<T> => {
+    return introspect(schema, metadata);
+  },
+
+  versioned: <T>(version: string, schema: Schema<T>): VersionedSchema<T> => {
+    return createVersionedSchema(version, schema);
+  },
+
+  // Schema utilities
+  serialize: (schema: Schema<any>): SerializedSchema => {
+    return SchemaSerializer.serialize(schema);
+  },
+
+  deserialize: (serialized: SerializedSchema): Schema<any> => {
+    return SchemaSerializer.deserialize(serialized);
+  },
+
+  validateWithContext: <T>(
+    schema: Schema<T>,
+    data: unknown,
+    context?: Partial<ValidationContext>
+  ): T => {
+    return ContextualValidator.validateWithContext(schema, data, context);
   }
 };
 
