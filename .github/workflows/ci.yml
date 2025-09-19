@@ -1,0 +1,318 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '18'
+  RUST_VERSION: 'stable'
+
+jobs:
+  test-rust:
+    name: Test Rust Code
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        targets: wasm32-unknown-unknown
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Run Rust tests
+      run: cargo test --verbose
+
+    - name: Run Rust lints
+      run: |
+        cargo fmt --all -- --check
+        cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Build WASM package
+      run: wasm-pack build --target bundler --out-dir js/pkg
+
+    - name: Test WASM in browser
+      run: wasm-pack test --headless --firefox
+
+  test-typescript:
+    name: Test TypeScript Code
+    runs-on: ubuntu-latest
+    needs: test-rust
+
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust and wasm-pack
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        targets: wasm32-unknown-unknown
+
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Build WASM package
+      run: wasm-pack build --target bundler --out-dir js/pkg
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: js/package-lock.json
+
+    - name: Install TypeScript dependencies
+      working-directory: js
+      run: npm ci
+
+    - name: Run TypeScript type checking
+      working-directory: js
+      run: npm run type-check
+
+    - name: Run TypeScript linting
+      working-directory: js
+      run: npm run lint
+
+    - name: Run TypeScript tests
+      working-directory: js
+      run: npm test
+
+    - name: Build TypeScript package
+      working-directory: js
+      run: npm run build
+
+    - name: Upload coverage to Codecov
+      if: matrix.node-version == 18
+      uses: codecov/codecov-action@v3
+      with:
+        directory: js/coverage
+        flags: typescript
+        name: typescript-coverage
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: [test-rust, test-typescript]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust and wasm-pack
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        targets: wasm32-unknown-unknown
+
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Build WASM package
+      run: wasm-pack build --target bundler --out-dir js/pkg
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: js/package-lock.json
+
+    - name: Install dependencies
+      working-directory: js
+      run: npm ci
+
+    - name: Install Zod for comparison
+      working-directory: js
+      run: npm install zod
+
+    - name: Run performance benchmarks
+      working-directory: js
+      run: npm run benchmark:all
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: js/benchmark-results.json
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Rust security audit
+      run: |
+        cargo install cargo-audit
+        cargo audit
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: TypeScript security audit
+      working-directory: js
+      run: |
+        npm audit --audit-level high
+        npx better-npm-audit audit
+
+  publish-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    needs: [test-rust, test-typescript, security]
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust and wasm-pack
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        targets: wasm32-unknown-unknown
+
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+    - name: Build WASM package
+      run: wasm-pack build --target bundler --out-dir js/pkg
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+        cache-dependency-path: js/package-lock.json
+
+    - name: Install dependencies
+      working-directory: js
+      run: npm ci
+
+    - name: Build package
+      working-directory: js
+      run: npm run build
+
+    - name: Update package version
+      working-directory: js
+      run: npm version ${{ github.event.release.tag_name }} --no-git-tag-version
+
+    - name: Publish to NPM
+      working-directory: js
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    - name: Create GitHub release artifacts
+      run: |
+        mkdir release-artifacts
+        cp -r js/dist release-artifacts/
+        cp -r js/pkg release-artifacts/
+        tar -czf release-artifacts/fast-schema-${{ github.event.release.tag_name }}.tar.gz -C js dist pkg
+
+    - name: Upload release artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./release-artifacts/fast-schema-${{ github.event.release.tag_name }}.tar.gz
+        asset_name: fast-schema-${{ github.event.release.tag_name }}.tar.gz
+        asset_content_type: application/gzip
+
+  publish-crate:
+    name: Publish to Crates.io
+    runs-on: ubuntu-latest
+    needs: [test-rust, security]
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+
+    - name: Publish to crates.io
+      run: cargo publish
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [test-rust, test-typescript]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+
+    - name: Generate Rust docs
+      run: cargo doc --no-deps
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install TypeScript dependencies
+      working-directory: js
+      run: npm ci
+
+    - name: Generate TypeScript docs
+      working-directory: js
+      run: npx typedoc src/index.ts
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./target/doc
+        destination_dir: rust-docs
+
+    - name: Deploy TypeScript docs
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./js/docs
+        destination_dir: ts-docs

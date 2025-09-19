@@ -1,0 +1,125 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the sections below to help us fix it quickly.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Create schema with...
+        2. Call method...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: Instead, what happened was...
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal-example
+    attributes:
+      label: Minimal Reproduction Example
+      description: Provide a minimal code example that reproduces the issue
+      placeholder: |
+        ```typescript
+        import { z } from 'fast-schema';
+
+        const schema = z.string().email();
+        const result = schema.parse("invalid-email");
+        // Error occurs here
+        ```
+      render: typescript
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment-type
+    attributes:
+      label: Environment
+      description: Where are you running fast-schema?
+      options:
+        - Browser
+        - Node.js
+        - Deno
+        - Bun
+        - React Native
+        - Electron
+        - Other (specify in additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Fast-Schema Version
+      description: What version of fast-schema are you using?
+      placeholder: "e.g., 1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version (if applicable)
+      description: What version of Node.js are you using?
+      placeholder: "e.g., 18.16.0"
+
+  - type: input
+    id: typescript-version
+    attributes:
+      label: TypeScript Version (if applicable)
+      description: What version of TypeScript are you using?
+      placeholder: "e.g., 5.0.4"
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Any additional information...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided a minimal reproduction example
+          required: true
+        - label: I have tested this with the latest version of fast-schema
+          required: true

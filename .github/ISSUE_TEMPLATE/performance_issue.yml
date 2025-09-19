@@ -1,0 +1,130 @@
+name: Performance Issue
+description: Report a performance regression or optimization opportunity
+title: "[Performance]: "
+labels: ["performance", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a performance issue! Performance is our top priority at Fast-Schema.
+
+  - type: textarea
+    id: performance-description
+    attributes:
+      label: Performance Issue Description
+      description: Describe the performance problem you're experiencing
+      placeholder: The validation is slower than expected when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: benchmark-data
+    attributes:
+      label: Benchmark Data
+      description: If you have benchmark results, please share them
+      placeholder: |
+        Fast-Schema: 1000ms for 10,000 validations
+        Zod: 500ms for 10,000 validations
+        Expected: <200ms for 10,000 validations
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-case
+    attributes:
+      label: Test Case
+      description: Provide the schema and data that's causing performance issues
+      placeholder: |
+        ```typescript
+        import { z } from 'fast-schema';
+
+        const schema = z.object({
+          // your schema here
+        });
+
+        // Performance test
+        const data = { /* test data */ };
+        const start = performance.now();
+        for (let i = 0; i < 10000; i++) {
+          schema.parse(data);
+        }
+        const end = performance.now();
+        console.log(`Time: ${end - start}ms`);
+        ```
+      render: typescript
+    validations:
+      required: true
+
+  - type: dropdown
+    id: performance-type
+    attributes:
+      label: Performance Issue Type
+      description: What type of performance issue is this?
+      options:
+        - Slow validation speed
+        - High memory usage
+        - Bundle size increase
+        - Compilation time
+        - Startup time
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: data-size
+    attributes:
+      label: Data Size
+      description: Approximate size of data being validated
+      placeholder: "e.g., 1KB, 100 objects, large nested structure"
+
+  - type: textarea
+    id: environment-details
+    attributes:
+      label: Environment Details
+      description: Provide details about your environment
+      placeholder: |
+        - Browser/Node.js version:
+        - Fast-Schema version:
+        - Device specs (if relevant):
+        - Network conditions (if relevant):
+
+  - type: dropdown
+    id: comparison
+    attributes:
+      label: Performance Comparison
+      description: Have you compared with other validation libraries?
+      options:
+        - "Yes - Fast-Schema is slower"
+        - "Yes - Fast-Schema is comparable"
+        - "Yes - Fast-Schema is faster but could be better"
+        - "No - Haven't compared"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-performance
+    attributes:
+      label: Expected Performance
+      description: What performance do you expect?
+      placeholder: I expected validation to complete in...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other context about the performance issue
+      placeholder: Additional details...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have provided benchmark data or timing information
+          required: true
+        - label: I have tested with the latest version of fast-schema
+          required: true
+        - label: I have provided a reproducible test case
+          required: true

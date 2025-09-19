@@ -1,0 +1,60 @@
+{
+  "name": "fast-schema-wasm",
+  "version": "0.1.0",
+  "description": "Ultra-fast schema validation library - 10-20x faster than Zod with 100% API compatibility",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "pkg/**/*"
+  ],
+  "scripts": {
+    "build": "npm run build:wasm && npm run build:ts",
+    "build:wasm": "cd .. && wasm-pack build --target bundler --out-dir js/pkg",
+    "build:ts": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "benchmark": "node ../benchmarks/vs-zod.js",
+    "benchmark:all": "node ../benchmarks/comprehensive.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "schema",
+    "validation",
+    "typescript",
+    "zod",
+    "fast",
+    "wasm",
+    "rust",
+    "performance",
+    "json",
+    "validator"
+  ],
+  "author": "Juan Tadeo <tadeoaragoon@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/fast-schema.git"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "zod": "^3.22.0"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "typescript": ">=4.5.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
