@@ -33,7 +33,24 @@ import {
   BatchValidationItem,
   BatchValidationOptions,
   BatchValidationResult,
-  BatchValidationStats
+  BatchValidationStats,
+  ValidationEventEmitter,
+  ValidationMonitor,
+  globalValidationMonitor,
+  ValidationEvent,
+  ValidationEventType,
+  ValidationEventListener,
+  ValidationStartEvent,
+  ValidationSuccessEvent,
+  ValidationErrorEvent,
+  ValidationCacheEvent,
+  AsyncValidationStartEvent,
+  AsyncValidationCompleteEvent,
+  BatchValidationStartEvent,
+  BatchValidationCompleteEvent,
+  BatchItemValidationEvent,
+  PerformanceEvent,
+  DebugEvent
 } from './core';
 
 // Core exports - Fast-Schema's clean API
@@ -53,7 +70,24 @@ export {
   BatchValidationItem,
   BatchValidationOptions,
   BatchValidationResult,
-  BatchValidationStats
+  BatchValidationStats,
+  ValidationEventEmitter,
+  ValidationMonitor,
+  globalValidationMonitor,
+  ValidationEvent,
+  ValidationEventType,
+  ValidationEventListener,
+  ValidationStartEvent,
+  ValidationSuccessEvent,
+  ValidationErrorEvent,
+  ValidationCacheEvent,
+  AsyncValidationStartEvent,
+  AsyncValidationCompleteEvent,
+  BatchValidationStartEvent,
+  BatchValidationCompleteEvent,
+  BatchItemValidationEvent,
+  PerformanceEvent,
+  DebugEvent
 };
 
 // Type inference helpers - Fast-Schema's TypeScript magic

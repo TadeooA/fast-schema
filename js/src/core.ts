@@ -56,6 +56,210 @@ export interface ReactElement {
   children?: ReactElement | ReactElement[] | string | null;
 }
 
+// Event system interfaces and types
+export interface ValidationEventData {
+  schemaType: string;
+  data: unknown;
+  timestamp: number;
+  id?: string;
+  context?: Record<string, any>;
+}
+
+export interface ValidationStartEvent extends ValidationEventData {
+  type: 'validation:start';
+  async: boolean;
+}
+
+export interface ValidationSuccessEvent extends ValidationEventData {
+  type: 'validation:success';
+  result: unknown;
+  duration: number;
+  async: boolean;
+}
+
+export interface ValidationErrorEvent extends ValidationEventData {
+  type: 'validation:error';
+  error: ValidationError;
+  duration: number;
+  async: boolean;
+}
+
+export interface ValidationCacheEvent extends ValidationEventData {
+  type: 'validation:cache';
+  cacheHit: boolean;
+  cacheKey: string;
+}
+
+export interface AsyncValidationStartEvent extends ValidationEventData {
+  type: 'async:start';
+  refinementId: string;
+  debounced: boolean;
+}
+
+export interface AsyncValidationCompleteEvent extends ValidationEventData {
+  type: 'async:complete';
+  refinementId: string;
+  success: boolean;
+  duration: number;
+  cancelled: boolean;
+}
+
+export interface BatchValidationStartEvent extends ValidationEventData {
+  type: 'batch:start';
+  itemCount: number;
+  maxConcurrency: number;
+  batchId: string;
+}
+
+export interface BatchValidationCompleteEvent extends ValidationEventData {
+  type: 'batch:complete';
+  batchId: string;
+  successful: number;
+  failed: number;
+  duration: number;
+  avgItemDuration: number;
+}
+
+export interface BatchItemValidationEvent extends ValidationEventData {
+  type: 'batch:item';
+  batchId: string;
+  itemIndex: number;
+  itemId?: string | number;
+  success: boolean;
+  duration: number;
+}
+
+export interface PerformanceEvent extends ValidationEventData {
+  type: 'performance';
+  metric: string;
+  value: number;
+  unit: string;
+}
+
+export interface DebugEvent extends ValidationEventData {
+  type: 'debug';
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  details?: any;
+}
+
+export type ValidationEvent =
+  | ValidationStartEvent
+  | ValidationSuccessEvent
+  | ValidationErrorEvent
+  | ValidationCacheEvent
+  | AsyncValidationStartEvent
+  | AsyncValidationCompleteEvent
+  | BatchValidationStartEvent
+  | BatchValidationCompleteEvent
+  | BatchItemValidationEvent
+  | PerformanceEvent
+  | DebugEvent;
+
+export type ValidationEventType = ValidationEvent['type'];
+
+export type ValidationEventListener<T extends ValidationEvent = ValidationEvent> = (event: T) => void;
+
+// Event emitter for validation events
+export class ValidationEventEmitter {
+  private listeners: Map<ValidationEventType | '*', ValidationEventListener[]> = new Map();
+  private enabled: boolean = true;
+
+  // Subscribe to specific event type
+  on<T extends ValidationEventType>(eventType: T, listener: ValidationEventListener<Extract<ValidationEvent, { type: T }>>): this;
+  on(eventType: '*', listener: ValidationEventListener): this;
+  on(eventType: ValidationEventType | '*', listener: ValidationEventListener): this {
+    if (!this.listeners.has(eventType)) {
+      this.listeners.set(eventType, []);
+    }
+    this.listeners.get(eventType)!.push(listener);
+    return this;
+  }
+
+  // Unsubscribe from event type
+  off<T extends ValidationEventType>(eventType: T, listener: ValidationEventListener<Extract<ValidationEvent, { type: T }>>): this;
+  off(eventType: '*', listener: ValidationEventListener): this;
+  off(eventType: ValidationEventType | '*', listener: ValidationEventListener): this {
+    const listeners = this.listeners.get(eventType);
+    if (listeners) {
+      const index = listeners.indexOf(listener);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+    return this;
+  }
+
+  // Subscribe once
+  once<T extends ValidationEventType>(eventType: T, listener: ValidationEventListener<Extract<ValidationEvent, { type: T }>>): this;
+  once(eventType: '*', listener: ValidationEventListener): this;
+  once(eventType: ValidationEventType | '*', listener: ValidationEventListener): this {
+    const onceListener = (event: ValidationEvent) => {
+      this.off(eventType, onceListener as any);
+      listener(event);
+    };
+    return this.on(eventType, onceListener as any);
+  }
+
+  // Emit event
+  emit(event: ValidationEvent): void {
+    if (!this.enabled) return;
+
+    // Emit to specific listeners
+    const specificListeners = this.listeners.get(event.type);
+    if (specificListeners) {
+      for (const listener of specificListeners) {
+        try {
+          listener(event);
+        } catch (error) {
+          console.warn('Error in validation event listener:', error);
+        }
+      }
+    }
+
+    // Emit to wildcard listeners
+    const wildcardListeners = this.listeners.get('*');
+    if (wildcardListeners) {
+      for (const listener of wildcardListeners) {
+        try {
+          listener(event);
+        } catch (error) {
+          console.warn('Error in validation event listener:', error);
+        }
+      }
+    }
+  }
+
+  // Remove all listeners
+  removeAllListeners(eventType?: ValidationEventType | '*'): this {
+    if (eventType) {
+      this.listeners.delete(eventType);
+    } else {
+      this.listeners.clear();
+    }
+    return this;
+  }
+
+  // Get listener count
+  listenerCount(eventType: ValidationEventType | '*'): number {
+    return this.listeners.get(eventType)?.length || 0;
+  }
+
+  // Enable/disable event emission
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  // Get all event types with listeners
+  getEventTypes(): Array<ValidationEventType | '*'> {
+    return Array.from(this.listeners.keys());
+  }
+}
+
 // Validation error class - Fast-Schema's clean error handling
 export class ValidationError extends Error {
   public issues: ValidationIssue[];
@@ -150,9 +354,13 @@ export abstract class Schema<Output = any, Input = Output> {
   readonly _input!: Input;
 
   protected schemaType: any;
+  protected eventEmitter: ValidationEventEmitter;
+  protected instanceId: string;
 
   constructor(schemaType: any) {
     this.schemaType = schemaType;
+    this.eventEmitter = new ValidationEventEmitter();
+    this.instanceId = `schema_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   // Core validation methods - Fast-Schema API
@@ -167,21 +375,74 @@ export abstract class Schema<Output = any, Input = Output> {
   safeParse(data: unknown):
     | { success: true; data: Output }
     | { success: false; error: ValidationError } {
+    const startTime = Date.now();
+
+    // Emit validation start event
+    this.emitEvent({
+      type: 'validation:start',
+      schemaType: this.schemaType.type || 'unknown',
+      data,
+      timestamp: startTime,
+      id: this.instanceId,
+      async: false
+    });
+
+    // Also emit to global monitor
+    globalValidationMonitor.emit({
+      type: 'validation:start',
+      schemaType: this.schemaType.type || 'unknown',
+      data,
+      timestamp: startTime,
+      id: this.instanceId,
+      async: false
+    });
+
     try {
       const validated = this._validate(data);
+      const duration = Date.now() - startTime;
+
+      // Emit success event
+      const successEvent: ValidationSuccessEvent = {
+        type: 'validation:success',
+        schemaType: this.schemaType.type || 'unknown',
+        data,
+        timestamp: startTime,
+        id: this.instanceId,
+        async: false,
+        result: validated,
+        duration
+      };
+
+      this.emitEvent(successEvent);
+      globalValidationMonitor.emit(successEvent);
+
       return { success: true, data: validated };
     } catch (error) {
-      if (error instanceof ValidationError) {
-        return { success: false, error };
-      }
-      return {
-        success: false,
-        error: new ValidationError([{
-          code: 'custom',
-          path: [],
-          message: error instanceof Error ? error.message : 'Validation failed'
-        }])
+      const duration = Date.now() - startTime;
+      const validationError = error instanceof ValidationError
+        ? error
+        : new ValidationError([{
+            code: 'custom',
+            path: [],
+            message: error instanceof Error ? error.message : 'Validation failed'
+          }]);
+
+      // Emit error event
+      const errorEvent: ValidationErrorEvent = {
+        type: 'validation:error',
+        schemaType: this.schemaType.type || 'unknown',
+        data,
+        timestamp: startTime,
+        id: this.instanceId,
+        async: false,
+        error: validationError,
+        duration
       };
+
+      this.emitEvent(errorEvent);
+      globalValidationMonitor.emit(errorEvent);
+
+      return { success: false, error: validationError };
     }
   }
 
@@ -198,21 +459,73 @@ export abstract class Schema<Output = any, Input = Output> {
     | { success: true; data: Output }
     | { success: false; error: ValidationError }
   > {
+    const startTime = Date.now();
+
+    // Emit async validation start event
+    this.emitEvent({
+      type: 'validation:start',
+      schemaType: this.schemaType.type || 'unknown',
+      data,
+      timestamp: startTime,
+      id: this.instanceId,
+      async: true
+    });
+
+    globalValidationMonitor.emit({
+      type: 'validation:start',
+      schemaType: this.schemaType.type || 'unknown',
+      data,
+      timestamp: startTime,
+      id: this.instanceId,
+      async: true
+    });
+
     try {
       const validated = await this._validateAsync(data, options);
+      const duration = Date.now() - startTime;
+
+      // Emit success event
+      const successEvent: ValidationSuccessEvent = {
+        type: 'validation:success',
+        schemaType: this.schemaType.type || 'unknown',
+        data,
+        timestamp: startTime,
+        id: this.instanceId,
+        async: true,
+        result: validated,
+        duration
+      };
+
+      this.emitEvent(successEvent);
+      globalValidationMonitor.emit(successEvent);
+
       return { success: true, data: validated };
     } catch (error) {
-      if (error instanceof ValidationError) {
-        return { success: false, error };
-      }
-      return {
-        success: false,
-        error: new ValidationError([{
-          code: 'custom',
-          path: [],
-          message: error instanceof Error ? error.message : 'Async validation failed'
-        }])
+      const duration = Date.now() - startTime;
+      const validationError = error instanceof ValidationError
+        ? error
+        : new ValidationError([{
+            code: 'custom',
+            path: [],
+            message: error instanceof Error ? error.message : 'Async validation failed'
+          }]);
+
+      // Emit error event
+      const errorEvent: ValidationErrorEvent = {
+        type: 'validation:error',
+        schemaType: this.schemaType.type || 'unknown',
+        data,
+        timestamp: startTime,
+        id: this.instanceId,
+        async: true,
+        error: validationError,
+        duration
       };
+
+      this.emitEvent(errorEvent);
+      globalValidationMonitor.emit(errorEvent);
+
+      return { success: false, error: validationError };
     }
   }
 
@@ -293,6 +606,75 @@ export abstract class Schema<Output = any, Input = Output> {
   // Internal async validation method - default implementation calls sync version
   protected async _validateAsync(data: unknown, options?: AsyncValidationOptions): Promise<Output> {
     return this._validate(data);
+  }
+
+  // Event system methods
+  on<T extends ValidationEventType>(eventType: T, listener: ValidationEventListener<Extract<ValidationEvent, { type: T }>>): this;
+  on(eventType: '*', listener: ValidationEventListener): this;
+  on(eventType: ValidationEventType | '*', listener: ValidationEventListener): this {
+    this.eventEmitter.on(eventType, listener);
+    return this;
+  }
+
+  off<T extends ValidationEventType>(eventType: T, listener: ValidationEventListener<Extract<ValidationEvent, { type: T }>>): this;
+  off(eventType: '*', listener: ValidationEventListener): this;
+  off(eventType: ValidationEventType | '*', listener: ValidationEventListener): this {
+    this.eventEmitter.off(eventType, listener);
+    return this;
+  }
+
+  once<T extends ValidationEventType>(eventType: T, listener: ValidationEventListener<Extract<ValidationEvent, { type: T }>>): this;
+  once(eventType: '*', listener: ValidationEventListener): this;
+  once(eventType: ValidationEventType | '*', listener: ValidationEventListener): this {
+    this.eventEmitter.once(eventType, listener);
+    return this;
+  }
+
+  removeAllListeners(eventType?: ValidationEventType | '*'): this {
+    this.eventEmitter.removeAllListeners(eventType);
+    return this;
+  }
+
+  protected emitEvent(event: ValidationEvent): void {
+    this.eventEmitter.emit(event);
+  }
+
+  // Performance and debugging helpers
+  protected emitPerformance(metric: string, value: number, unit: string, context?: Record<string, any>): void {
+    this.emitEvent({
+      type: 'performance',
+      schemaType: this.schemaType.type || 'unknown',
+      data: null,
+      timestamp: Date.now(),
+      id: this.instanceId,
+      context,
+      metric,
+      value,
+      unit
+    });
+  }
+
+  protected emitDebug(level: 'info' | 'warn' | 'error', message: string, details?: any, context?: Record<string, any>): void {
+    this.emitEvent({
+      type: 'debug',
+      schemaType: this.schemaType.type || 'unknown',
+      data: null,
+      timestamp: Date.now(),
+      id: this.instanceId,
+      context,
+      level,
+      message,
+      details
+    });
+  }
+
+  // Get instance information
+  getInstanceId(): string {
+    return this.instanceId;
+  }
+
+  getEventEmitter(): ValidationEventEmitter {
+    return this.eventEmitter;
   }
 
   // Get the internal schema representation
@@ -1026,6 +1408,23 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
     }
   }
 
+  private emitAsyncCompleteEvent(startTime: number, success: boolean, cancelled: boolean): void {
+    const asyncCompleteEvent: AsyncValidationCompleteEvent = {
+      type: 'async:complete',
+      schemaType: this.schemaType.type || 'async_refinement',
+      data: null,
+      timestamp: startTime,
+      id: this.instanceId,
+      refinementId: this.schemaId,
+      success,
+      duration: Date.now() - startTime,
+      cancelled
+    };
+
+    this.emitEvent(asyncCompleteEvent);
+    globalValidationMonitor.emit(asyncCompleteEvent);
+  }
+
   protected _validate(data: unknown): T['_output'] {
     throw new ValidationError([{
       code: 'async_required',
@@ -1035,6 +1434,22 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
   }
 
   protected async _validateAsync(data: unknown, options?: AsyncValidationOptions): Promise<T['_output']> {
+    const startTime = Date.now();
+
+    // Emit async validation start event
+    const asyncStartEvent: AsyncValidationStartEvent = {
+      type: 'async:start',
+      schemaType: this.schemaType.type || 'async_refinement',
+      data,
+      timestamp: startTime,
+      id: this.instanceId,
+      refinementId: this.schemaId,
+      debounced: (options?.debounce ?? this.config.debounce ?? 0) > 0
+    };
+
+    this.emitEvent(asyncStartEvent);
+    globalValidationMonitor.emit(asyncStartEvent);
+
     // First validate with base schema
     const baseResult = await this.baseSchema._validateAsync(data, options);
 
@@ -1044,9 +1459,25 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
     // Check cache if enabled
     if (this.config.cache && this.isValidCacheEntry(cacheKey)) {
       const cached = this.cache.get(cacheKey);
+
+      // Emit cache event
+      this.emitEvent({
+        type: 'validation:cache',
+        schemaType: this.schemaType.type || 'async_refinement',
+        data,
+        timestamp: Date.now(),
+        id: this.instanceId,
+        cacheHit: true,
+        cacheKey
+      });
+
       if (cached && cached.result) {
+        // Emit async complete event for cache hit
+        this.emitAsyncCompleteEvent(startTime, true, false);
         return baseResult;
       } else if (cached && !cached.result) {
+        // Emit async complete event for cache hit (failed)
+        this.emitAsyncCompleteEvent(startTime, false, false);
         throw new ValidationError([{
           code: 'custom',
           path: [],
@@ -1092,16 +1523,26 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
 
     try {
       const result = await validationPromise;
-      return this.processAsyncResult(result, baseResult, cacheKey);
+      const processedResult = this.processAsyncResult(result, baseResult, cacheKey);
+
+      // Emit async complete event for success
+      this.emitAsyncCompleteEvent(startTime, true, false);
+
+      return processedResult;
     } catch (error) {
       // Handle debounce cancellation gracefully
       if (error instanceof Error && error.message.includes('Debounced')) {
+        // Emit async complete event for cancellation
+        this.emitAsyncCompleteEvent(startTime, false, true);
         throw new ValidationError([{
           code: 'debounce_cancelled',
           path: [],
           message: 'Validation was cancelled due to newer input'
         }]);
       }
+
+      // Emit async complete event for failure
+      this.emitAsyncCompleteEvent(startTime, false, false);
       throw error;
     } finally {
       if (this.config.cancelPrevious && !debounceDelay) {
@@ -1323,6 +1764,10 @@ export class BatchValidator {
     this.defaultOptions = { ...this.defaultOptions, ...options };
   }
 
+  private generateBatchId(): string {
+    return `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   async validateAsync<T extends any[]>(
     items: { [K in keyof T]: BatchValidationItem<T[K]> },
     options?: BatchValidationOptions
@@ -1337,6 +1782,21 @@ export class BatchValidator {
   ): Promise<BatchValidationResult[] | any> {
     const finalOptions = { ...this.defaultOptions, ...options };
     const startTime = Date.now();
+    const batchId = this.generateBatchId();
+
+    // Emit batch start event
+    const batchStartEvent: BatchValidationStartEvent = {
+      type: 'batch:start',
+      schemaType: 'batch',
+      data: null,
+      timestamp: startTime,
+      id: batchId,
+      itemCount: items.length,
+      maxConcurrency: finalOptions.maxConcurrency || 5,
+      batchId
+    };
+
+    globalValidationMonitor.emit(batchStartEvent);
 
     // Handle AbortController timeout
     const controller = new AbortController();
@@ -1352,17 +1812,55 @@ export class BatchValidator {
     }
 
     try {
-      const results = await this.processBatch(items, finalOptions, controller.signal);
+      const results = await this.processBatch(items, finalOptions, controller.signal, batchId);
 
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
+
+      // Emit batch complete event
+      const duration = Date.now() - startTime;
+      const successful = results.filter(r => r.success).length;
+      const failed = results.length - successful;
+      const avgItemDuration = results.reduce((sum, r) => sum + (r.duration || 0), 0) / results.length;
+
+      const batchCompleteEvent: BatchValidationCompleteEvent = {
+        type: 'batch:complete',
+        schemaType: 'batch',
+        data: null,
+        timestamp: startTime,
+        id: batchId,
+        batchId,
+        successful,
+        failed,
+        duration,
+        avgItemDuration
+      };
+
+      globalValidationMonitor.emit(batchCompleteEvent);
 
       return results;
     } catch (error) {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
+
+      // Emit batch complete event for error case
+      const duration = Date.now() - startTime;
+      const batchCompleteEvent: BatchValidationCompleteEvent = {
+        type: 'batch:complete',
+        schemaType: 'batch',
+        data: null,
+        timestamp: startTime,
+        id: batchId,
+        batchId,
+        successful: 0,
+        failed: items.length,
+        duration,
+        avgItemDuration: 0
+      };
+
+      globalValidationMonitor.emit(batchCompleteEvent);
       throw error;
     }
   }
@@ -1370,7 +1868,8 @@ export class BatchValidator {
   private async processBatch(
     items: BatchValidationItem[],
     options: BatchValidationOptions,
-    abortSignal: AbortSignal
+    abortSignal: AbortSignal,
+    batchId: string
   ): Promise<BatchValidationResult[]> {
     const results: BatchValidationResult[] = new Array(items.length);
     const maxConcurrency = options.maxConcurrency || 5;
@@ -1397,13 +1896,30 @@ export class BatchValidator {
           result = item.schema._validate(item.data);
         }
 
+        const duration = Date.now() - itemStartTime;
         results[itemIndex] = {
           success: true,
           data: result,
           id: item.id,
-          duration: Date.now() - itemStartTime
+          duration
         };
+
+        // Emit batch item event for success
+        globalValidationMonitor.emit({
+          type: 'batch:item',
+          schemaType: 'batch',
+          data: item.data,
+          timestamp: itemStartTime,
+          id: `${batchId}_item_${itemIndex}`,
+          batchId,
+          itemIndex,
+          itemId: item.id,
+          success: true,
+          duration
+        });
+
       } catch (error) {
+        const duration = Date.now() - itemStartTime;
         const validationError = error instanceof ValidationError
           ? error
           : new ValidationError([{
@@ -1416,8 +1932,22 @@ export class BatchValidator {
           success: false,
           error: validationError,
           id: item.id,
-          duration: Date.now() - itemStartTime
+          duration
         };
+
+        // Emit batch item event for failure
+        globalValidationMonitor.emit({
+          type: 'batch:item',
+          schemaType: 'batch',
+          data: item.data,
+          timestamp: itemStartTime,
+          id: `${batchId}_item_${itemIndex}`,
+          batchId,
+          itemIndex,
+          itemId: item.id,
+          success: false,
+          duration
+        });
 
         // Stop on first error if configured
         if (options.stopOnFirstError) {
@@ -1507,6 +2037,214 @@ export class BatchValidator {
     return { successful, failed };
   }
 }
+
+// Global validation monitoring system
+export class ValidationMonitor extends ValidationEventEmitter {
+  private validationCount: number = 0;
+  private asyncValidationCount: number = 0;
+  private batchValidationCount: number = 0;
+  private errorCount: number = 0;
+  private totalDuration: number = 0;
+  private performanceMetrics: Map<string, { values: number[]; timestamps: number[] }> = new Map();
+
+  constructor() {
+    super();
+
+    // Auto-collect basic statistics
+    this.on('*', (event) => {
+      this.collectStatistics(event);
+    });
+  }
+
+  private collectStatistics(event: ValidationEvent): void {
+    switch (event.type) {
+      case 'validation:start':
+        if (event.async) {
+          this.asyncValidationCount++;
+        } else {
+          this.validationCount++;
+        }
+        break;
+
+      case 'validation:error':
+        this.errorCount++;
+        this.totalDuration += event.duration;
+        break;
+
+      case 'validation:success':
+        this.totalDuration += event.duration;
+        break;
+
+      case 'batch:start':
+        this.batchValidationCount++;
+        break;
+
+      case 'performance':
+        this.recordPerformanceMetric(event.metric, event.value, event.timestamp);
+        break;
+    }
+  }
+
+  private recordPerformanceMetric(metric: string, value: number, timestamp: number): void {
+    if (!this.performanceMetrics.has(metric)) {
+      this.performanceMetrics.set(metric, { values: [], timestamps: [] });
+    }
+
+    const data = this.performanceMetrics.get(metric)!;
+    data.values.push(value);
+    data.timestamps.push(timestamp);
+
+    // Keep only last 1000 measurements to prevent memory leaks
+    if (data.values.length > 1000) {
+      data.values.shift();
+      data.timestamps.shift();
+    }
+  }
+
+  // Statistics getters
+  getStatistics(): {
+    validationCount: number;
+    asyncValidationCount: number;
+    batchValidationCount: number;
+    errorCount: number;
+    totalDuration: number;
+    averageDuration: number;
+    errorRate: number;
+  } {
+    const totalValidations = this.validationCount + this.asyncValidationCount;
+    return {
+      validationCount: this.validationCount,
+      asyncValidationCount: this.asyncValidationCount,
+      batchValidationCount: this.batchValidationCount,
+      errorCount: this.errorCount,
+      totalDuration: this.totalDuration,
+      averageDuration: totalValidations > 0 ? this.totalDuration / totalValidations : 0,
+      errorRate: totalValidations > 0 ? this.errorCount / totalValidations : 0
+    };
+  }
+
+  getPerformanceMetrics(): Record<string, {
+    current: number;
+    average: number;
+    min: number;
+    max: number;
+    count: number
+  }> {
+    const metrics: Record<string, any> = {};
+
+    for (const [metricName, data] of this.performanceMetrics.entries()) {
+      if (data.values.length > 0) {
+        const values = data.values;
+        metrics[metricName] = {
+          current: values[values.length - 1],
+          average: values.reduce((sum, val) => sum + val, 0) / values.length,
+          min: Math.min(...values),
+          max: Math.max(...values),
+          count: values.length
+        };
+      }
+    }
+
+    return metrics;
+  }
+
+  // Real-time monitoring methods
+  startPerformanceMonitoring(intervalMs: number = 5000): () => void {
+    const interval = setInterval(() => {
+      const stats = this.getStatistics();
+      this.emit({
+        type: 'performance',
+        schemaType: 'monitor',
+        data: null,
+        timestamp: Date.now(),
+        id: 'global-monitor',
+        metric: 'monitoring.interval',
+        value: intervalMs,
+        unit: 'ms',
+        context: { stats }
+      });
+    }, intervalMs);
+
+    return () => clearInterval(interval);
+  }
+
+  // Reset statistics
+  resetStatistics(): void {
+    this.validationCount = 0;
+    this.asyncValidationCount = 0;
+    this.batchValidationCount = 0;
+    this.errorCount = 0;
+    this.totalDuration = 0;
+    this.performanceMetrics.clear();
+  }
+
+  // Event filtering helpers
+  onValidationSuccess(listener: (event: ValidationSuccessEvent) => void): this {
+    return this.on('validation:success', listener);
+  }
+
+  onValidationError(listener: (event: ValidationErrorEvent) => void): this {
+    return this.on('validation:error', listener);
+  }
+
+  onAsyncStart(listener: (event: AsyncValidationStartEvent) => void): this {
+    return this.on('async:start', listener);
+  }
+
+  onAsyncComplete(listener: (event: AsyncValidationCompleteEvent) => void): this {
+    return this.on('async:complete', listener);
+  }
+
+  onBatchStart(listener: (event: BatchValidationStartEvent) => void): this {
+    return this.on('batch:start', listener);
+  }
+
+  onBatchComplete(listener: (event: BatchValidationCompleteEvent) => void): this {
+    return this.on('batch:complete', listener);
+  }
+
+  onPerformance(listener: (event: PerformanceEvent) => void): this {
+    return this.on('performance', listener);
+  }
+
+  onDebug(listener: (event: DebugEvent) => void): this {
+    return this.on('debug', listener);
+  }
+
+  // Advanced filtering
+  onSchemaType(schemaType: string, listener: ValidationEventListener): this {
+    return this.on('*', (event) => {
+      if (event.schemaType === schemaType) {
+        listener(event);
+      }
+    });
+  }
+
+  onErrorsOnly(listener: ValidationEventListener): this {
+    return this.on('*', (event) => {
+      if (event.type === 'validation:error' || event.type === 'debug' && (event as DebugEvent).level === 'error') {
+        listener(event);
+      }
+    });
+  }
+
+  // Debug helpers
+  enableDebugMode(): void {
+    this.on('*', (event) => {
+      console.log(`[FastSchema Debug] ${event.type}:`, event);
+    });
+  }
+
+  createEventLogger(prefix: string = '[FastSchema]'): ValidationEventListener {
+    return (event: ValidationEvent) => {
+      const timestamp = new Date(event.timestamp).toISOString();
+      console.log(`${prefix} [${timestamp}] ${event.type}:`, event);
+    };
+  }
+}
+
+// Global instance
+export const globalValidationMonitor = new ValidationMonitor();
 
 // Debouncing utility for async validation
 class DebouncedAsyncFunction<T extends any[], R> {
