@@ -12,6 +12,7 @@ This directory contains examples of Fast-Schema's async validation capabilities.
 ## Files
 
 - `basic-async.js` - Basic async validation examples
+- `debounced-validation.js` - Debouncing examples and performance testing
 - `advanced-config.js` - Advanced configuration options (coming soon)
 - `real-world.js` - Real-world use cases (coming soon)
 
@@ -21,8 +22,12 @@ This directory contains examples of Fast-Schema's async validation capabilities.
 # Run basic async validation examples
 node examples/async-validation/basic-async.js
 
+# Run debouncing examples
+node examples/async-validation/debounced-validation.js
+
 # Or run from project root
 npm run example:async
+npm run example:debounce
 ```
 
 ## API Overview
@@ -53,6 +58,31 @@ const schema = z.string()
       debounce: 300         // Debounce rapid calls
     }
   );
+```
+
+### Debouncing Configuration
+
+```javascript
+const usernameSchema = z.string()
+  .min(3)
+  .refineAsync(
+    checkUsernameAvailability,
+    {
+      message: "Username is taken",
+      debounce: 500,     // Wait 500ms after user stops typing
+      cache: {
+        ttl: 60000,      // Cache for 1 minute
+        maxSize: 100     // Limit cache size
+      },
+      cancelPrevious: true // Cancel previous validations
+    }
+  );
+
+// Standalone debounced functions
+import { createDebouncedValidator, debounceAsyncFunction } from 'fast-schema';
+
+const debouncedEmailCheck = createDebouncedValidator(checkEmailUnique, 300);
+const debouncedValidator = debounceAsyncFunction(asyncValidator, 400);
 ```
 
 ### Usage Patterns

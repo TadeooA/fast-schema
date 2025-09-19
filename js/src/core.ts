@@ -1000,6 +1000,8 @@ export class TransformSchema<Input extends Schema<any>, Output> extends Schema<O
 export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_output']> {
   private cache = new Map<string, { result: boolean; timestamp: number }>();
   private activeRequests = new Map<string, Promise<boolean>>();
+  private debouncedFunction: DebouncedAsyncFunction<[T['_output'], AsyncValidationOptions?], boolean> | null = null;
+  private schemaId: string;
 
   constructor(
     private baseSchema: T,
@@ -1011,6 +1013,17 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
       base: baseSchema.getSchema(),
       config
     });
+
+    // Generate unique ID for this schema instance
+    this.schemaId = `async_refinement_${Date.now()}_${Math.random()}`;
+
+    // Set up debounced function if debouncing is enabled
+    if (this.config.debounce && this.config.debounce > 0) {
+      this.debouncedFunction = new DebouncedAsyncFunction(
+        this.executeAsyncValidation.bind(this),
+        this.config.debounce
+      );
+    }
   }
 
   protected _validate(data: unknown): T['_output'] {
@@ -1042,30 +1055,56 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
       }
     }
 
-    // Check for existing request to prevent duplicate calls
-    if (this.config.cancelPrevious && this.activeRequests.has(cacheKey)) {
-      const existingRequest = this.activeRequests.get(cacheKey)!;
-      try {
-        const result = await existingRequest;
-        return this.processAsyncResult(result, baseResult, cacheKey);
-      } catch (error) {
-        this.activeRequests.delete(cacheKey);
-        throw error;
+    // Determine effective debounce delay
+    const debounceDelay = options?.debounce ?? this.config.debounce ?? 0;
+
+    let validationPromise: Promise<boolean>;
+
+    // Use debouncing if configured
+    if (debounceDelay > 0) {
+      // Get or create debounced function for this delay
+      const debouncedFn = globalDebounceManager.getDebouncedFunction(
+        `${this.schemaId}_${debounceDelay}`,
+        this.executeAsyncValidation.bind(this),
+        debounceDelay
+      );
+
+      validationPromise = debouncedFn.execute(baseResult, options);
+    } else {
+      // Check for existing request to prevent duplicate calls
+      if (this.config.cancelPrevious && this.activeRequests.has(cacheKey)) {
+        const existingRequest = this.activeRequests.get(cacheKey)!;
+        try {
+          const result = await existingRequest;
+          return this.processAsyncResult(result, baseResult, cacheKey);
+        } catch (error) {
+          this.activeRequests.delete(cacheKey);
+          throw error;
+        }
       }
-    }
 
-    // Create async validation request
-    const validationPromise = this.executeAsyncValidation(baseResult, options);
+      validationPromise = this.executeAsyncValidation(baseResult, options);
 
-    if (this.config.cancelPrevious) {
-      this.activeRequests.set(cacheKey, validationPromise);
+      if (this.config.cancelPrevious) {
+        this.activeRequests.set(cacheKey, validationPromise);
+      }
     }
 
     try {
       const result = await validationPromise;
       return this.processAsyncResult(result, baseResult, cacheKey);
+    } catch (error) {
+      // Handle debounce cancellation gracefully
+      if (error instanceof Error && error.message.includes('Debounced')) {
+        throw new ValidationError([{
+          code: 'debounce_cancelled',
+          path: [],
+          message: 'Validation was cancelled due to newer input'
+        }]);
+      }
+      throw error;
     } finally {
-      if (this.config.cancelPrevious) {
+      if (this.config.cancelPrevious && !debounceDelay) {
         this.activeRequests.delete(cacheKey);
       }
     }
@@ -1199,6 +1238,180 @@ export class AsyncRefinementSchema<T extends Schema<any>> extends Schema<T['_out
       size: this.cache.size
     };
   }
+
+  // Debounce management methods
+  cancelPendingValidations(): void {
+    // Cancel debounced functions
+    if (this.debouncedFunction) {
+      this.debouncedFunction.cancel();
+    }
+
+    // Cancel any specific debounced functions in global manager
+    globalDebounceManager.cleanup(`${this.schemaId}_${this.config.debounce}`);
+
+    // Cancel active requests
+    for (const [key, promise] of this.activeRequests.entries()) {
+      // We can't actually cancel the promise, but we can remove it from tracking
+      this.activeRequests.delete(key);
+    }
+  }
+
+  // Check if there are pending validations
+  hasPendingValidations(): boolean {
+    if (this.debouncedFunction && this.debouncedFunction.isRunning()) {
+      return true;
+    }
+    return this.activeRequests.size > 0;
+  }
+
+  // Get debounce stats
+  getDebounceStats(): { isDebouncing: boolean; activeRequests: number; cacheSize: number } {
+    return {
+      isDebouncing: this.debouncedFunction ? this.debouncedFunction.isRunning() : false,
+      activeRequests: this.activeRequests.size,
+      cacheSize: this.cache.size
+    };
+  }
+
+  // Cleanup method for proper disposal
+  dispose(): void {
+    this.cancelPendingValidations();
+    this.clearCache();
+  }
+}
+
+// Debouncing utility for async validation
+class DebouncedAsyncFunction<T extends any[], R> {
+  private timeoutId: NodeJS.Timeout | null = null;
+  private lastPromise: Promise<R> | null = null;
+  private lastResolve: ((value: R) => void) | null = null;
+  private lastReject: ((reason: any) => void) | null = null;
+
+  constructor(
+    private fn: (...args: T) => Promise<R>,
+    private delay: number
+  ) {}
+
+  async execute(...args: T): Promise<R> {
+    // Clear existing timeout
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
+    // If there's a pending promise, we'll reuse its structure
+    if (this.lastPromise && this.lastResolve && this.lastReject) {
+      // Cancel the previous execution by rejecting it
+      this.lastReject(new Error('Debounced: newer call received'));
+    }
+
+    // Create new promise
+    return new Promise<R>((resolve, reject) => {
+      this.lastResolve = resolve;
+      this.lastReject = reject;
+
+      this.timeoutId = setTimeout(async () => {
+        try {
+          const result = await this.fn(...args);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.lastPromise = null;
+          this.lastResolve = null;
+          this.lastReject = null;
+          this.timeoutId = null;
+        }
+      }, this.delay);
+    });
+  }
+
+  cancel(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    if (this.lastReject) {
+      this.lastReject(new Error('Debounced function cancelled'));
+      this.lastPromise = null;
+      this.lastResolve = null;
+      this.lastReject = null;
+    }
+  }
+
+  isRunning(): boolean {
+    return this.timeoutId !== null;
+  }
+}
+
+// Global debounce manager for validation functions
+class ValidationDebounceManager {
+  private debouncedFunctions = new Map<string, DebouncedAsyncFunction<any, any>>();
+
+  getDebouncedFunction<T extends any[], R>(
+    key: string,
+    fn: (...args: T) => Promise<R>,
+    delay: number
+  ): DebouncedAsyncFunction<T, R> {
+    if (!this.debouncedFunctions.has(key)) {
+      this.debouncedFunctions.set(key, new DebouncedAsyncFunction(fn, delay));
+    }
+    return this.debouncedFunctions.get(key)!;
+  }
+
+  cancelAll(): void {
+    for (const debouncedFn of this.debouncedFunctions.values()) {
+      debouncedFn.cancel();
+    }
+  }
+
+  cleanup(key: string): void {
+    const debouncedFn = this.debouncedFunctions.get(key);
+    if (debouncedFn) {
+      debouncedFn.cancel();
+      this.debouncedFunctions.delete(key);
+    }
+  }
+
+  getStats(): { active: number; total: number } {
+    let active = 0;
+    for (const debouncedFn of this.debouncedFunctions.values()) {
+      if (debouncedFn.isRunning()) {
+        active++;
+      }
+    }
+    return {
+      active,
+      total: this.debouncedFunctions.size
+    };
+  }
+}
+
+// Global instance
+const globalDebounceManager = new ValidationDebounceManager();
+
+// Export debounce utilities for external use
+export {
+  DebouncedAsyncFunction,
+  ValidationDebounceManager,
+  globalDebounceManager
+};
+
+// Utility functions for debouncing
+export function createDebouncedValidator<T>(
+  validator: (value: T) => Promise<boolean>,
+  delay: number
+): (value: T) => Promise<boolean> {
+  const debouncedFn = new DebouncedAsyncFunction(validator, delay);
+  return (value: T) => debouncedFn.execute(value);
+}
+
+export function debounceAsyncFunction<T extends any[], R>(
+  fn: (...args: T) => Promise<R>,
+  delay: number
+): (...args: T) => Promise<R> {
+  const debouncedFn = new DebouncedAsyncFunction(fn, delay);
+  return (...args: T) => debouncedFn.execute(...args);
 }
 
 // Validation helper functions
