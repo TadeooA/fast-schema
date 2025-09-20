@@ -44,6 +44,12 @@ export {
   type WasmInstance
 } from './node-loader';
 
+export {
+  ESMWrapper,
+  loadWasmBindings,
+  type WasmBindings
+} from './esm-wrapper';
+
 // Main WASM integration API
 export class FastSchemaWasm {
   // Quick access to different z variants

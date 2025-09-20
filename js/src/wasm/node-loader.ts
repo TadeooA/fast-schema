@@ -47,28 +47,33 @@ export class NodeWasmLoader {
       const bindingsPath = this._findBindingsFile();
       let imports = {};
 
-      // For now, let's try without the JS bindings to test basic WASM loading
-      // The WASM module might work with minimal imports
+      // Try to load real WASM bindings using ESM Wrapper
       if (bindingsPath) {
-        console.log(`WASM bindings found at: ${bindingsPath}, but using minimal imports for now`);
-      }
+        try {
+          console.log(`🔧 Loading real WASM bindings from: ${bindingsPath}`);
 
-      // Create minimal imports object with required functions
-      imports = {
-        './fast_schema_bg.js': {
-          __wbg_set_wasm: () => {},
-          __wbg_error_7534b8e9a36f1ab4: (ptr: number, len: number) => console.error('WASM Error'),
-          __wbg_error_785f3cbbddee182e: (ptr: number, len: number) => console.error('WASM Error'),
-          __wbg_log_7ff3e5f5d9bc8473: (ptr: number, len: number) => console.log('WASM Log'),
-          __wbg_new_8a6f238a6ece86ea: () => ({}),
-          __wbg_stack_0ed75d68575b0f3c: (ptr: number, len: number) => '',
-          __wbg_warn_3db133942ab6822e: (ptr: number, len: number) => console.warn('WASM Warning'),
-          __wbg_wbindgenthrow_4c11a24fca429ccf: (ptr: number, len: number) => { throw new Error('WASM throw'); },
-          __wbindgen_cast_2241b6af4c4b2941: (arg0: any, arg1: any) => arg0,
-          __wbindgen_init_externref_table: () => {}
-        },
-        __wbindgen_placeholder__: {},
-      };
+          // Import ESM Wrapper
+          const { ESMWrapper } = await import('./esm-wrapper');
+
+          // Load real WASM bindings
+          const realBindings = await ESMWrapper.loadWasmBindings(bindingsPath);
+
+          if (realBindings) {
+            console.log('🚀 SUCCESS: Real WASM bindings loaded!');
+            imports = ESMWrapper.createImportObject(realBindings);
+          } else {
+            console.log('⚠️  Falling back to stub bindings');
+            imports = this.createFallbackImports();
+          }
+
+        } catch (error) {
+          console.warn('❌ Failed to load real WASM bindings, using fallbacks:', error.message);
+          imports = this.createFallbackImports();
+        }
+      } else {
+        console.log('📝 No bindings path found, using fallback imports');
+        imports = this.createFallbackImports();
+      }
 
       // Instantiate WASM module
       const wasmModule = await WebAssembly.compile(wasmBuffer);
@@ -122,6 +127,27 @@ export class NodeWasmLoader {
 
     console.warn('WASM file not found in any of the expected locations:', possiblePaths);
     return null;
+  }
+
+  /**
+   * Create fallback imports when real bindings can't be loaded
+   */
+  private static createFallbackImports(): any {
+    return {
+      './fast_schema_bg.js': {
+        __wbg_set_wasm: () => {},
+        __wbg_error_7534b8e9a36f1ab4: (ptr: number, len: number) => console.error('WASM Error (fallback)'),
+        __wbg_error_785f3cbbddee182e: (ptr: number, len: number) => console.error('WASM Error (fallback)'),
+        __wbg_log_7ff3e5f5d9bc8473: (ptr: number, len: number) => console.log('WASM Log (fallback)'),
+        __wbg_new_8a6f238a6ece86ea: () => ({}),
+        __wbg_stack_0ed75d68575b0f3c: (ptr: number, len: number) => '',
+        __wbg_warn_3db133942ab6822e: (ptr: number, len: number) => console.warn('WASM Warning (fallback)'),
+        __wbg_wbindgenthrow_4c11a24fca429ccf: (ptr: number, len: number) => { throw new Error('WASM throw (fallback)'); },
+        __wbindgen_cast_2241b6af4c4b2941: (arg0: any, arg1: any) => arg0,
+        __wbindgen_init_externref_table: () => {}
+      },
+      __wbindgen_placeholder__: {},
+    };
   }
 
   /**
