@@ -113,6 +113,12 @@ export class EnumSchema<T extends [string, ...string[]]> extends Schema<T[number
   }
 }
 
+// Ultra-performance imports
+import { ultra, type UltraInfer } from './ultra/index';
+
+// Tiered performance system
+import tieredPerformance from './tiered/index';
+
 // Main fast API object - ultra-performance validation without Zod compatibility constraints
 export const fast = {
   // Primitive types
@@ -216,6 +222,12 @@ export const fast = {
     }
     return new CustomSchema({ type: 'custom' });
   },
+
+  // Ultra-performance mode (100x target)
+  ultra: ultra,
+
+  // Tiered performance system - choose your speed level
+  performance: tieredPerformance,
 
   // WASM integration utilities (when available)
   wasm: {

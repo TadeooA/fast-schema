@@ -2,6 +2,9 @@
 import { fast, ValidationError, Schema } from './api';
 
 export { fast, ValidationError, Schema };
+
+// Export tiered performance system for easy access
+export const { normal, fast: fastTier, ultra, select, recommend, for: recommendations } = fast.performance;
 export type { infer, TypeOf } from './api';
 export type { SafeParseReturnType } from './base/types';
 
