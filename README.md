@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![Performance](https://img.shields.io/badge/Performance-11x_faster-green.svg)](./docs/benchmarks.md)
+[![Status](https://img.shields.io/badge/Status-In_Development-orange.svg)](https://github.com/TadeooA/fast-schema)
 
 **The ultimate TypeScript-first schema validation library powered by Rust and WebAssembly.**
 
@@ -70,10 +71,22 @@ const schema = fast.performance.ultra.precompile(
 - **Performance**: 50-400x faster with pre-compiled validators
 - **Features**: Memory pooling, batch processing, zero overhead
 
-## 📦 Installation
+## 🚧 Development Status
+
+**Fast-Schema is currently in active development.** The library demonstrates exceptional performance results and is being built in public.
+
+### Getting Started
 
 ```bash
-npm install @tadeoa/fast-schema
+# Clone the repository
+git clone https://github.com/TadeooA/fast-schema.git
+cd fast-schema
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
 ```
 
 ## 🏃‍♂️ Quick Start
@@ -81,7 +94,7 @@ npm install @tadeoa/fast-schema
 ### Basic Usage
 
 ```typescript
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './js/src/api';
 
 // Define your schema
 const userSchema = fast.object({
@@ -125,7 +138,7 @@ try {
 ### Performance-Optimized Usage
 
 ```typescript
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './js/src/api';
 
 // For maximum performance
 const ultraSchema = fast.performance.ultra.precompile(
@@ -150,7 +163,7 @@ const results = batchValidator.parseMany(largeDatasetsArray);
 
 ```typescript
 import express from 'express';
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './js/src/api';
 
 const app = express();
 
@@ -191,7 +204,7 @@ app.post('/orders', async (req, res) => {
 ### Batch Processing
 
 ```typescript
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './js/src/api';
 
 // Process millions of records efficiently
 const recordSchema = fast.performance.ultra.object({
@@ -244,10 +257,11 @@ async function processDataStream(dataStream: unknown[]) {
 
 Fast-Schema provides **seamless migration** from Zod:
 
-### Step 1: Install Fast-Schema
+### Step 1: Clone and Build
 ```bash
-npm install @tadeoa/fast-schema
-npm uninstall zod  # optional
+git clone https://github.com/TadeooA/fast-schema.git
+cd fast-schema
+npm install && npm run build
 ```
 
 ### Step 2: Update Imports
@@ -256,10 +270,10 @@ npm uninstall zod  # optional
 import { z } from 'zod';
 
 // After - choose your performance tier
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './path/to/fast-schema/js/src/api';
 
 // Or use the Zod-compatible API
-import { z } from '@tadeoa/fast-schema';  // Drop-in replacement
+import { z } from './path/to/fast-schema/js/src/api';  // Drop-in replacement
 ```
 
 ### Step 3: Choose Performance Tier
@@ -333,7 +347,7 @@ const productSchema = fast.performance.fast.object({
 ### Core API
 
 ```typescript
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './js/src/api';
 
 // Primitive types
 fast.string()
@@ -412,7 +426,7 @@ fast.object({
 ### Performance Tier Selection
 
 ```typescript
-import { fast } from '@tadeoa/fast-schema';
+import { fast } from './js/src/api';
 
 // Auto-select based on requirements
 const schema = fast.performance.select({
@@ -485,6 +499,25 @@ cargo test
 wasm-pack test --headless --chrome
 ```
 
+## 🚧 Current Status
+
+**Fast-Schema is in active development and building in public.**
+
+### What's Working
+- ✅ Core validation API with exceptional performance
+- ✅ Three performance tiers (Normal, Fast, Ultra)
+- ✅ WASM integration with Rust backend
+- ✅ Comprehensive benchmark suite
+- ✅ Type inference and error handling
+- ✅ Proven performance: 11x faster than Zod, 2x faster than AJV
+
+### What's Coming
+- 🔄 Complete Zod API compatibility
+- 🔄 NPM package publication
+- 🔄 Advanced validation features
+- 🔄 Framework integrations
+- 🔄 Production stability testing
+
 ## 🤝 Contributing
 
 We welcome contributions! Fast-Schema is building in public.
@@ -537,3 +570,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **Fast-Schema: Where performance meets developer experience.** 🚀
+
+> **Note**: This project is in active development. While the performance benchmarks are real and impressive, the library is not yet ready for production use. We're building in public and welcome feedback and contributions!
