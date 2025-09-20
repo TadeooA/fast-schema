@@ -22,6 +22,7 @@
     "benchmark:build": "npm run build && npm run benchmark",
     "benchmark:legacy": "node ../benchmarks/vs-zod.js",
     "benchmark:comprehensive": "node ../benchmarks/comprehensive.js",
+    "benchmark:zod": "node dist/benchmarks/run-zod-benchmark.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

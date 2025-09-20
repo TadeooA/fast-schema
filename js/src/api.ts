@@ -114,7 +114,7 @@ export class EnumSchema<T extends [string, ...string[]]> extends Schema<T[number
 }
 
 // Ultra-performance imports
-import { ultra, type UltraInfer } from './ultra/index';
+import { ultra } from './ultra/index';
 
 // Tiered performance system
 import tieredPerformance from './tiered/index';

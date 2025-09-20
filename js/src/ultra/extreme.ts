@@ -256,9 +256,67 @@ export class ExtremeBooleanSchema {
 
 export class ExtremeArraySchema<T> {
   private validator: (data: unknown) => T[];
+  private constraints: { min?: number; max?: number } = {};
 
-  constructor(itemSchema: { getValidator(): (data: unknown) => T }) {
-    this.validator = ExtremeOptimizer.compileExtremeArray(itemSchema.getValidator());
+  constructor(
+    private itemSchema: { getValidator(): (data: unknown) => T },
+    constraints: { min?: number; max?: number } = {}
+  ) {
+    this.constraints = constraints;
+    this.validator = this.compileValidator();
+  }
+
+  private compileValidator(): (data: unknown) => T[] {
+    const itemValidator = this.itemSchema.getValidator();
+    const { min, max } = this.constraints;
+
+    return (data: unknown): T[] => {
+      if (!Array.isArray(data)) throw new Error("Expected array");
+
+      // Length validation
+      if (min !== undefined && data.length < min) {
+        throw new Error(`Array must have at least ${min} items`);
+      }
+      if (max !== undefined && data.length > max) {
+        throw new Error(`Array must have at most ${max} items`);
+      }
+
+      // Pre-allocate result array for maximum performance
+      const length = data.length;
+      const result = new Array<T>(length);
+
+      // Unrolled loop for small arrays (common case optimization)
+      if (length <= 10) {
+        for (let i = 0; i < length; i++) {
+          result[i] = itemValidator(data[i]);
+        }
+      } else {
+        // Batched processing for large arrays
+        let i = 0;
+        const batchSize = 100;
+        while (i < length) {
+          const end = Math.min(i + batchSize, length);
+          for (let j = i; j < end; j++) {
+            result[j] = itemValidator(data[j]);
+          }
+          i = end;
+        }
+      }
+
+      return result;
+    };
+  }
+
+  min(count: number): ExtremeArraySchema<T> {
+    return new ExtremeArraySchema(this.itemSchema, { ...this.constraints, min: count });
+  }
+
+  max(count: number): ExtremeArraySchema<T> {
+    return new ExtremeArraySchema(this.itemSchema, { ...this.constraints, max: count });
+  }
+
+  length(count: number): ExtremeArraySchema<T> {
+    return new ExtremeArraySchema(this.itemSchema, { ...this.constraints, min: count, max: count });
   }
 
   parse(data: unknown): T[] {
@@ -352,7 +410,7 @@ export const extreme = {
   string: () => new ExtremeStringSchema(),
   number: () => new ExtremeNumberSchema(),
   boolean: () => new ExtremeBooleanSchema(),
-  array: <T>(schema: { getValidator(): (data: unknown) => T }) => new ExtremeArraySchema(schema),
+  array: <T>(schema: { getValidator(): (data: unknown) => T }) => new ExtremeArraySchema(schema, {}),
   object: <T extends Record<string, any>>(
     shape: { [K in keyof T]: { getValidator(): (data: unknown) => T[K] } }
   ) => new ExtremeObjectSchema(shape, Object.keys(shape) as (keyof T)[]),
