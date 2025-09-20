@@ -1,6 +1,6 @@
 // TypeScript-WASM bridge for seamless integration
 import { Schema } from '../base/schema';
-import { z } from '../api';
+import { fast } from '../api';
 import { HybridValidationEngine, HybridSchema, hybridize } from './hybrid';
 
 // Enhanced z object with WASM capabilities
@@ -50,26 +50,26 @@ class WasmBridge {
 
   // Wrap schema creation methods with hybrid capabilities
   wrapString(): HybridSchema<string> {
-    return this.hybridEngine.createHybridSchema(z.string());
+    return this.hybridEngine.createHybridSchema(fast.string());
   }
 
   wrapNumber(): HybridSchema<number> {
-    return this.hybridEngine.createHybridSchema(z.number());
+    return this.hybridEngine.createHybridSchema(fast.number());
   }
 
   wrapBoolean(): HybridSchema<boolean> {
-    return this.hybridEngine.createHybridSchema(z.boolean());
+    return this.hybridEngine.createHybridSchema(fast.boolean());
   }
 
   wrapArray<T>(schema: Schema<T>): HybridSchema<T[]> {
-    const arraySchema = z.array(schema);
+    const arraySchema = fast.array(schema);
     return this.hybridEngine.createHybridSchema(arraySchema);
   }
 
   wrapObject<T extends Record<string, any>>(
     shape: { [K in keyof T]: Schema<T[K]> }
   ): HybridSchema<T> {
-    const objectSchema = z.object(shape);
+    const objectSchema = fast.object(shape);
     return this.hybridEngine.createHybridSchema(objectSchema);
   }
 
@@ -177,12 +177,12 @@ export const wasmZ: WasmZ = {
   autoHybrid: <T>(schema: Schema<T>) => getWasmBridge().autoHybridize(schema)
 };
 
-// Compatibility layer for existing z usage
-export const zWasm = wasmZ;
+// Compatibility layer for existing usage
+export const fastWasm = wasmZ;
 
-// Migration helper - gradually replace z with wasmZ
+// Migration helper - gradually replace fast with wasmFast
 export function createMigrationAdapter() {
-  return new Proxy(z, {
+  return new Proxy(fast, {
     get(target, prop) {
       // If WASM bridge has the property, use it
       if (prop in wasmZ) {
@@ -190,7 +190,7 @@ export function createMigrationAdapter() {
         return (wasmZ as any)[prop];
       }
 
-      // Fallback to original z
+      // Fallback to original fast
       return (target as any)[prop];
     }
   });
@@ -288,15 +288,15 @@ export function smartSchema<T>(schema: Schema<T>): HybridSchema<T> {
 }
 
 // Convenience exports for different use cases
-export const fastZ = wasmZ; // For explicit fast validation
-export const smartZ = createMigrationAdapter(); // For gradual migration
-export const optimizedZ = { // For auto-optimized schemas
-  string: () => smartSchema(z.string()),
-  number: () => smartSchema(z.number()),
-  boolean: () => smartSchema(z.boolean()),
-  array: <T>(schema: Schema<T>) => smartSchema(z.array(schema)),
+export const wasmFast = wasmZ; // For explicit fast validation
+export const smartFast = createMigrationAdapter(); // For gradual migration
+export const optimizedFast = { // For auto-optimized schemas
+  string: () => smartSchema(fast.string()),
+  number: () => smartSchema(fast.number()),
+  boolean: () => smartSchema(fast.boolean()),
+  array: <T>(schema: Schema<T>) => smartSchema(fast.array(schema)),
   object: <T extends Record<string, any>>(shape: { [K in keyof T]: Schema<T[K]> }) =>
-    smartSchema(z.object(shape))
+    smartSchema(fast.object(shape))
 };
 
 // Utility to check if WASM is working correctly

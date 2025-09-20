@@ -1,4 +1,4 @@
-// Main API - the `z` object that users interact with
+// Main API - the `fast` object for ultra-performance validation
 import { ValidationError } from './base/types';
 import { Schema } from './base/schema';
 
@@ -113,8 +113,8 @@ export class EnumSchema<T extends [string, ...string[]]> extends Schema<T[number
   }
 }
 
-// Main z API object
-export const z = {
+// Main fast API object - ultra-performance validation without Zod compatibility constraints
+export const fast = {
   // Primitive types
   string: () => new StringSchema(),
   number: () => new NumberSchema(),
@@ -279,7 +279,7 @@ export const z = {
 // Type inference helper
 export type TypeOf<T extends Schema<any>> = T extends Schema<infer U> ? U : never;
 
-// Alias for compatibility with Zod
+// Type inference for fast schemas
 export type infer<T extends Schema<any>> = TypeOf<T>;
 
 // Re-export key types

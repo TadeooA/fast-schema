@@ -373,8 +373,8 @@ export class NullableSchema<T> extends BaseSchema<T | null> {
   }
 }
 
-// Main z object
-export const z = {
+// Main fast object - ultra-performance validation
+export const fast = {
   string: () => new StringSchema(),
   number: () => new NumberSchema(),
   boolean: () => new BooleanSchema(),

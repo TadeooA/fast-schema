@@ -27,13 +27,13 @@ npm install fast-schema
 ### Basic Usage
 
 ```javascript
-import { z, ValidationError, infer } from 'fast-schema';
+import { fast, ValidationError, infer } from 'fast-schema';
 
-const userSchema = z.object({
-  name: z.string().min(2).max(50),
-  age: z.number().int().min(18),
-  email: z.string().email(),
-  tags: z.array(z.string())
+const userSchema = fast.object({
+  name: fast.string().min(2).max(50),
+  age: fast.number().int().min(18),
+  email: fast.string().email(),
+  tags: fast.array(fast.string())
 });
 
 // Type inference

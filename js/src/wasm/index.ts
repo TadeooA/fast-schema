@@ -26,10 +26,10 @@ export {
 
 export {
   wasmZ,
-  zWasm,
-  fastZ,
-  smartZ,
-  optimizedZ,
+  fastWasm,
+  wasmFast,
+  smartFast,
+  optimizedFast,
   createMigrationAdapter,
   withPerformanceMonitoring,
   AutoOptimizer,
@@ -52,11 +52,11 @@ export {
 
 // Main WASM integration API
 export class FastSchemaWasm {
-  // Quick access to different z variants
+  // Quick access to different validation variants
   static get z() { return wasmZ; }
-  static get fast() { return fastZ; }
-  static get smart() { return smartZ; }
-  static get optimized() { return optimizedZ; }
+  static get fast() { return wasmFast; }
+  static get smart() { return smartFast; }
+  static get optimized() { return optimizedFast; }
 
   // WASM utilities
   static isAvailable(): boolean {
@@ -112,6 +112,6 @@ export type {
 export default FastSchemaWasm;
 
 // Import statements for easier usage
-import { wasmZ, fastZ, smartZ, optimizedZ, smartSchema, testWasmIntegration, AutoOptimizer } from './bridge';
+import { wasmZ, wasmFast, smartFast, optimizedFast, smartSchema, testWasmIntegration, AutoOptimizer } from './bridge';
 import { HybridSchema } from './hybrid';
 import { Schema } from '../base/schema';

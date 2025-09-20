@@ -1,7 +1,7 @@
-// Fast-Schema - Main entry point for the modular version
-import { z, ValidationError, Schema } from './api';
+// Fast-Schema - Ultra-performance validation entry point
+import { fast, ValidationError, Schema } from './api';
 
-export { z, ValidationError, Schema };
+export { fast, ValidationError, Schema };
 export type { infer, TypeOf } from './api';
 export type { SafeParseReturnType } from './base/types';
 
@@ -44,13 +44,16 @@ export {
 export type { HybridConfig, WasmZ } from './wasm/index';
 export { FastSchemaWasm } from './wasm/index';
 
-// Compatibility exports for easy migration
+// Legacy compatibility (deprecated - use fast for ultra-performance)
 export const ZodError = ValidationError;
 export type ZodType<T = any> = Schema<T>;
 export type ZodSchema<T = any> = Schema<T>;
 
+// Alias for the ultra-performance API
+export const z = fast;
+
 // Export benchmarking utilities
 export * from './benchmarks';
 
-// Re-export z as default for convenience
-export default { z, ValidationError, Schema };
+// Re-export fast as default for ultra-performance
+export default { fast, ValidationError, Schema };

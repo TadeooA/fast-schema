@@ -1,7 +1,7 @@
 {
   "name": "@tadeoa/fast-schema",
   "version": "0.1.0-alpha.1",
-  "description": "Ultra-fast schema validation library - 10-20x faster than Zod with 100% API compatibility",
+  "description": "Ultra-performance schema validation library - 10-100x faster than Zod with optimized 'fast' API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
