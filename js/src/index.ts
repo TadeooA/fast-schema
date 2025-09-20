@@ -49,5 +49,8 @@ export const ZodError = ValidationError;
 export type ZodType<T = any> = Schema<T>;
 export type ZodSchema<T = any> = Schema<T>;
 
+// Export benchmarking utilities
+export * from './benchmarks';
+
 // Re-export z as default for convenience
 export default { z, ValidationError, Schema };

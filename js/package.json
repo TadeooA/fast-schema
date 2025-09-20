@@ -17,8 +17,10 @@
     "test:watch": "jest --watch",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
-    "benchmark": "node ../benchmarks/vs-zod.js",
-    "benchmark:all": "node ../benchmarks/comprehensive.js",
+    "benchmark": "node dist/benchmarks/cli.js",
+    "benchmark:build": "npm run build && npm run benchmark",
+    "benchmark:legacy": "node ../benchmarks/vs-zod.js",
+    "benchmark:comprehensive": "node ../benchmarks/comprehensive.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
