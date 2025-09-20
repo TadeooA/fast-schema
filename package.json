@@ -57,12 +57,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/fast-schema.git"
+    "url": "https://github.com/TadeooA/fast-schema.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/fast-schema/issues"
+    "url": "https://github.com/TadeooA/fast-schema/issues"
   },
-  "homepage": "https://github.com/your-org/fast-schema#readme",
+  "homepage": "https://github.com/TadeooA/fast-schema#readme",
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^18.15.0",
