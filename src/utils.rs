@@ -2,6 +2,7 @@
 use crate::schema::{StringFormat, SchemaType};
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::{Serialize, Deserialize};
 use std::collections::{HashMap, HashSet};
 
 /// Compiled regex patterns for string format validation
@@ -76,6 +77,8 @@ pub fn validate_string_format(value: &str, format: &StringFormat) -> bool {
         StringFormat::JsonPointer => is_valid_json_pointer(value),
         StringFormat::RelativeJsonPointer => is_valid_relative_json_pointer(value),
         StringFormat::Regex => is_valid_regex(value),
+        // TODO: Implement validation for additional formats
+        _ => true, // Default to true for now - implement specific validations as needed
     }
 }
 
@@ -157,6 +160,7 @@ fn is_valid_regex(value: &str) -> bool {
 }
 
 /// Path utilities for building validation paths
+#[derive(Debug, Clone)]
 pub struct PathBuilder {
     segments: Vec<String>,
 }
@@ -368,7 +372,7 @@ pub struct ValidationContext {
     pub options: ValidationOptions,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationOptions {
     pub early_exit: bool,
     pub collect_all_errors: bool,

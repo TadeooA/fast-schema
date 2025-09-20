@@ -89,11 +89,26 @@ export class HybridValidationEngine {
 
   private async initializeWasm(): Promise<void> {
     try {
-      // Try to load WASM module to check availability
+      // Import and use the NodeWasmLoader
+      const { NodeWasmLoader } = await import('./node-loader');
+
+      // Check if we're in Node.js environment
+      if (NodeWasmLoader.isNodeEnvironment()) {
+        // Use native WASM loader for Node.js
+        const wasmInstance = await NodeWasmLoader.getInstance();
+        if (!wasmInstance) {
+          throw new Error('Failed to load WASM in Node.js');
+        }
+        return; // Successfully loaded
+      }
+
+      // Fallback to dynamic imports for browser environments
       const possiblePaths = [
-        '../pkg/fast_schema_wasm',
-        './pkg/fast_schema_wasm',
-        'fast-schema-wasm'
+        '../pkg/fast_schema',
+        './pkg/fast_schema',
+        '../../pkg/fast_schema',
+        'fast_schema',
+        'fast-schema'
       ];
 
       for (const path of possiblePaths) {

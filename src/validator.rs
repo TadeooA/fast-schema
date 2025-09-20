@@ -2,17 +2,18 @@
 use crate::error::{ValidationResult, ValidationError, ErrorCode};
 use crate::schema::{SchemaType, StringFormat, CompiledSchema};
 use crate::utils::{
-    validate_string_format, PathBuilder, UniqueChecker, ValidationContext,
-    ValidationOptions, SchemaOptimizer, json_type_name, is_integer
+    validate_string_format, UniqueChecker, ValidationContext,
+    ValidationOptions, SchemaOptimizer, is_integer
 };
 use regex::Regex;
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Main validation engine
 pub struct Validator {
-    compiled_schema: CompiledSchema,
-    regex_cache: HashMap<String, Arc<Regex>>,
+    pub compiled_schema: CompiledSchema,
+    pub regex_cache: HashMap<String, Arc<Regex>>,
 }
 
 impl Validator {
@@ -31,7 +32,8 @@ impl Validator {
         let options = ValidationOptions::default();
         let mut context = ValidationContext::new(options);
 
-        let errors = self.validate_value(value, &self.compiled_schema.schema, &mut context);
+        let schema = &self.compiled_schema.schema.clone();
+        let errors = self.validate_value(value, schema, &mut context);
 
         if errors.is_empty() {
             if context.options.enable_performance_tracking {
@@ -182,6 +184,14 @@ impl Validator {
             }
             SchemaType::AnyOf { schemas } => {
                 self.validate_any_of(value, schemas, context)
+            }
+            // TODO: Implement validation for additional schema types
+            _ => {
+                vec![ValidationError::new(
+                    context.path.build(),
+                    "Schema type not yet implemented".to_string(),
+                    ErrorCode::SchemaInvalid,
+                )]
             }
         }
     }
@@ -421,10 +431,10 @@ impl Validator {
                     break;
                 }
 
-                context.path.with_index(index, |ctx| {
-                    let item_errors = self.validate_value(item, items_schema, ctx);
-                    errors.extend(item_errors);
-                });
+                context.path.push_index(index);
+                let item_errors = self.validate_value(item, items_schema, context);
+                context.path.pop();
+                errors.extend(item_errors);
             }
         } else {
             errors.push(ValidationError::type_mismatch(
@@ -468,10 +478,10 @@ impl Validator {
                         break;
                     }
 
-                    context.path.with_segment(prop_name, |ctx| {
-                        let prop_errors = self.validate_value(prop_value, prop_schema, ctx);
-                        errors.extend(prop_errors);
-                    });
+                    context.path.push(prop_name);
+                    let prop_errors = self.validate_value(prop_value, prop_schema, context);
+                    context.path.pop();
+                    errors.extend(prop_errors);
                 }
             }
 
@@ -637,6 +647,8 @@ fn fmt_name(format: &StringFormat) -> &'static str {
         StringFormat::JsonPointer => "json-pointer",
         StringFormat::RelativeJsonPointer => "relative-json-pointer",
         StringFormat::Regex => "regex",
+        // TODO: Add names for additional formats
+        _ => "unknown-format",
     }
 }
 
@@ -681,7 +693,7 @@ impl BatchValidator {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationStats {
     pub compiled_complexity: usize,
     pub max_depth: usize,

@@ -78,7 +78,7 @@ pub enum HtmlElementType {
 }
 
 /// HTML props validation schema
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HtmlProps {
     pub id: Option<String>,
     pub class_name: Option<String>,
@@ -92,7 +92,7 @@ pub struct HtmlProps {
     pub accessibility_level: AccessibilityLevel,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AccessibilityLevel {
     Basic,     // Basic ARIA attributes
     Enhanced,  // WCAG AA compliance
@@ -100,7 +100,7 @@ pub enum AccessibilityLevel {
 }
 
 /// React component validation schema
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReactComponent {
     pub component_name: String,
     pub props_schema: HashMap<String, crate::schema::SchemaType>,

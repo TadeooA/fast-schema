@@ -244,7 +244,7 @@ impl ValidationError {
             message,
             code,
             expected: None,
-            actual: None,
+            received: None,
         }
     }
 
@@ -254,20 +254,20 @@ impl ValidationError {
         message: String,
         code: ErrorCode,
         expected: serde_json::Value,
-        actual: serde_json::Value,
+        received: serde_json::Value,
     ) -> Self {
         Self {
             path,
             message,
             code,
-            expected: Some(expected),
-            actual: Some(actual),
+            expected: Some(expected.to_string()),
+            received: Some(received.to_string()),
         }
     }
 
     /// Create a type mismatch error
-    pub fn type_mismatch(path: String, expected: &str, actual: &serde_json::Value) -> Self {
-        let actual_type = match actual {
+    pub fn type_mismatch(path: String, expected: &str, received: &serde_json::Value) -> Self {
+        let received_type = match received {
             serde_json::Value::Null => "null",
             serde_json::Value::Bool(_) => "boolean",
             serde_json::Value::Number(_) => "number",
@@ -278,10 +278,10 @@ impl ValidationError {
 
         Self::with_values(
             path,
-            format!("Expected {}, got {}", expected, actual_type),
+            format!("Expected {}, got {}", expected, received_type),
             ErrorCode::InvalidType,
             serde_json::Value::String(expected.to_string()),
-            serde_json::Value::String(actual_type.to_string()),
+            serde_json::Value::String(received_type.to_string()),
         )
     }
 
@@ -329,22 +329,22 @@ impl ValidationError {
     }
 
     /// Create a number range error
-    pub fn number_range(path: String, actual: f64, min: Option<f64>, max: Option<f64>) -> Self {
+    pub fn number_range(path: String, received: f64, min: Option<f64>, max: Option<f64>) -> Self {
         let message = match (min, max) {
             (Some(min_val), Some(max_val)) => {
-                format!("Number {} is not between {} and {}", actual, min_val, max_val)
+                format!("Number {} is not between {} and {}", received, min_val, max_val)
             }
             (Some(min_val), None) => {
-                format!("Number {} is less than minimum {}", actual, min_val)
+                format!("Number {} is less than minimum {}", received, min_val)
             }
             (None, Some(max_val)) => {
-                format!("Number {} is greater than maximum {}", actual, max_val)
+                format!("Number {} is greater than maximum {}", received, max_val)
             }
             (None, None) => "Number range validation failed".to_string(),
         };
 
         let code = if let Some(min_val) = min {
-            if actual < min_val {
+            if received < min_val {
                 ErrorCode::NumberTooSmall
             } else {
                 ErrorCode::NumberTooLarge
@@ -358,7 +358,7 @@ impl ValidationError {
             message,
             code,
             serde_json::json!({ "min": min, "max": max }),
-            serde_json::json!(actual),
+            serde_json::json!(received),
         )
     }
 }
@@ -397,6 +397,8 @@ impl ErrorCode {
             ErrorCode::SchemaCompilationFailed => "Schema compilation failed",
             ErrorCode::ValidationFailed => "Validation failed",
             ErrorCode::InternalError => "Internal validation error",
+            // TODO: Add descriptions for additional error codes
+            _ => "Validation error",
         }
     }
 }

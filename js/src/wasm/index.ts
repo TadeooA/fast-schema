@@ -39,6 +39,11 @@ export {
   type WasmZ
 } from './bridge';
 
+export {
+  NodeWasmLoader,
+  type WasmInstance
+} from './node-loader';
+
 // Main WASM integration API
 export class FastSchemaWasm {
   // Quick access to different z variants

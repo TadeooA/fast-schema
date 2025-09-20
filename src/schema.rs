@@ -440,6 +440,8 @@ impl SchemaType {
                 10 + schemas.iter().map(|s| s.estimate_complexity()).sum::<usize>()
             }
             SchemaType::Any => 1,
+            // TODO: Implement complexity estimation for additional schema types
+            _ => 5, // Default complexity for unimplemented types
         }
     }
 
@@ -515,6 +517,8 @@ impl SchemaType {
                     .map(|s| s.estimated_validation_time())
                     .unwrap_or(1)
             }
+            // TODO: Add timing estimates for additional schema types
+            _ => 10, // Default timing for unimplemented types
         }
     }
 }
