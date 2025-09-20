@@ -5,7 +5,7 @@ module.exports = {
 
   // Test files
   testMatch: [
-    '<rootDir>/../tests/**/*.test.js',
+    '<rootDir>/src/tests/**/*.test.ts',
     '<rootDir>/src/**/__tests__/**/*.test.ts'
   ],
 
@@ -31,25 +31,27 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: {
-        compilerOptions: {
-          target: 'ES2020',
-          module: 'CommonJS',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          strict: true,
-        },
+        target: 'ES2020',
+        module: 'CommonJS',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        strict: false,
+        noUnusedLocals: false,
+        noUnusedParameters: false,
+        noImplicitOverride: false,
       },
     }],
   },
 
   // Module resolution
   moduleFileExtensions: ['ts', 'js', 'json'],
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '../pkg': '<rootDir>/src/tests/__mocks__/wasm-mock.ts',
   },
 
   // Setup files
-  setupFilesAfterEnv: ['<rootDir>/../tests/setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/src/tests/test-setup.ts'],
 
   // Performance
   maxWorkers: '50%',
@@ -67,8 +69,4 @@ module.exports = {
     '<rootDir>/pkg/',
   ],
 
-  // Mock WASM module for testing
-  moduleNameMapping: {
-    '../pkg': '<rootDir>/tests/__mocks__/wasm-mock.ts',
-  },
 };

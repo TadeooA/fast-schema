@@ -15,26 +15,26 @@ beforeAll(async () => {
   // Mock WASM module for tests that don't require it
   const mockWasmModule = {
     FastValidator: class MockFastValidator {
-      constructor(schema: string) {}
-      validate(data: string) { return '{"success":true,"data":null}'; }
-      validate_many(data: string) { return '[{"success":true,"data":null}]'; }
+      constructor(_schema: string) {}
+      validate(_data: string) { return '{"success":true,"data":null}'; }
+      validate_many(_data: string) { return '[{"success":true,"data":null}]'; }
       get_stats() { return '{"complexity":1}'; }
       reset_caches() {}
       get_memory_info() { return '{"usage":0}'; }
     },
     FastBatchValidator: class MockFastBatchValidator {
-      constructor(schema: string, batchSize: number) {}
-      validate_dataset(data: string) { return '[{"success":true,"data":null}]'; }
+      constructor(_schema: string, _batchSize: number) {}
+      validate_dataset(_data: string) { return '[{"success":true,"data":null}]'; }
       get_batch_stats() { return '{"processed":0}'; }
     },
     UltraFastValidator: class MockUltraFastValidator {
-      constructor(type: string, config: string) {}
-      validate_batch(data: string) { return '{"results":[],"stats":{}}'; }
+      constructor(_type: string, _config: string) {}
+      validate_batch(_data: string) { return '{"results":[],"stats":{}}'; }
     },
     FastSchemaUtils: {
-      validate_schema: (schema: string) => '{"valid":true}',
+      validate_schema: (_schema: string) => '{"valid":true}',
       get_version: () => '{"version":"0.1.0"}',
-      analyze_schema_performance: (schema: string) => '{"complexity":1}'
+      analyze_schema_performance: (_schema: string) => '{"complexity":1}'
     }
   };
 
@@ -105,14 +105,15 @@ expect.extend({
 
   toValidateSuccessfully(received, schema) {
     try {
-      const result = schema.parse(received);
+      schema.parse(received);
       return {
         message: () => `Expected data not to validate successfully`,
         pass: true,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
-        message: () => `Expected data to validate successfully, but got error: ${error.message}`,
+        message: () => `Expected data to validate successfully, but got error: ${errorMessage}`,
         pass: false,
       };
     }

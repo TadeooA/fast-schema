@@ -1,5 +1,5 @@
 // Comprehensive test suite for WASM integration
-import { z, ValidationError, FastSchemaWasm } from '../index';
+import { z, ValidationError, FastSchemaWasm, infer as Infer } from '../index';
 
 describe('WASM Integration Tests', () => {
 
@@ -418,7 +418,7 @@ describe('WASM Integration Tests', () => {
       const hybridSchema = z.wasm.hybridize(userSchema);
 
       // TypeScript should infer the correct type
-      type User = z.infer<typeof hybridSchema>;
+      type User = Infer<typeof hybridSchema>;
 
       const userData: User = {
         id: '123',

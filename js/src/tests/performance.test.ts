@@ -1,5 +1,5 @@
 // Comprehensive test suite for performance optimization features
-import { z, ValidationError } from '../index';
+import { z, ValidationError, RegexCache, SchemaCache, ValidationPool, StreamingValidator } from '../index';
 
 describe('Performance Optimization Tests', () => {
 
@@ -182,7 +182,7 @@ describe('Performance Optimization Tests', () => {
       // Check error details
       expect(results[1].success).toBe(false);
       if (!results[1].success) {
-        expect(results[1].error.issues[0].path).toEqual([1]); // Index in batch
+        expect((results[1] as any).error.issues[0].path).toEqual([1]); // Index in batch
       }
     });
 
@@ -204,8 +204,7 @@ describe('Performance Optimization Tests', () => {
   describe('Caching Systems', () => {
     test('should cache regex patterns for better performance', () => {
       // This tests the internal RegexCache if exposed
-      if (z.advanced && z.advanced.RegexCache) {
-        const RegexCache = z.advanced.RegexCache;
+      if (RegexCache) {
 
         // Clear cache for clean test
         RegexCache.clear();
@@ -228,8 +227,7 @@ describe('Performance Optimization Tests', () => {
     });
 
     test('should cache schema compilations', () => {
-      if (z.advanced && z.advanced.SchemaCache) {
-        const SchemaCache = z.advanced.SchemaCache;
+      if (SchemaCache) {
 
         SchemaCache.clear();
         expect(SchemaCache.size()).toBe(0);
@@ -245,8 +243,7 @@ describe('Performance Optimization Tests', () => {
     });
 
     test('should manage validation object pools', () => {
-      if (z.advanced && z.advanced.ValidationPool) {
-        const ValidationPool = z.advanced.ValidationPool;
+      if (ValidationPool) {
 
         ValidationPool.clear();
 
@@ -275,13 +272,13 @@ describe('Performance Optimization Tests', () => {
 
   describe('Streaming Validation', () => {
     test('should handle streaming data efficiently', async () => {
-      if (z.advanced && z.advanced.StreamingValidator) {
+      if (StreamingValidator) {
         const itemSchema = z.object({
           id: z.number(),
           data: z.string()
         });
 
-        const streamingValidator = new z.advanced.StreamingValidator(itemSchema, {
+        const streamingValidator = new StreamingValidator(itemSchema, {
           batchSize: 10,
           maxQueueSize: 100
         });
@@ -415,8 +412,7 @@ describe('Performance Optimization Tests', () => {
     });
 
     test('should reuse validation objects when possible', () => {
-      if (z.advanced && z.advanced.ValidationPool) {
-        const ValidationPool = z.advanced.ValidationPool;
+      if (ValidationPool) {
 
         ValidationPool.clear();
 

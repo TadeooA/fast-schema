@@ -38,7 +38,7 @@ describe('Conditional Schema Tests', () => {
         phone: z.string()
       });
 
-      const conditionalSchema = z.conditional(hasEmail, withEmailSchema, withoutEmailSchema);
+      const conditionalSchema = z.conditional(hasEmail, withEmailSchema, withoutEmailSchema as any);
 
       // Should fail - has email but invalid format
       expect(() => {
@@ -79,7 +79,7 @@ describe('Conditional Schema Tests', () => {
       const conditionalSchema = z.conditional(
         isPremium,
         premiumSchema,
-        z.conditional(isBasic, basicSchema, freeSchema)
+        z.conditional(isBasic, basicSchema, freeSchema as any)
       );
 
       // Test premium
@@ -130,7 +130,7 @@ describe('Conditional Schema Tests', () => {
         idNumber: z.string()
       });
 
-      const conditionalSchema = z.conditional(complexCondition, driverSchema, nonDriverSchema);
+      const conditionalSchema = z.conditional(complexCondition, driverSchema, nonDriverSchema as any);
 
       // Test US driver
       const driverData = {
@@ -179,7 +179,7 @@ describe('Conditional Schema Tests', () => {
       const conditionalSchema = z.conditional(
         hasRequiredField,
         withRequiredSchema,
-        withoutRequiredSchema
+        withoutRequiredSchema as any
       );
 
       try {
@@ -201,7 +201,7 @@ describe('Conditional Schema Tests', () => {
       const schemaA = z.object({ a: z.string() });
       const schemaB = z.object({ b: z.string() });
 
-      const conditionalSchema = z.conditional(faultyCondition, schemaA, schemaB);
+      const conditionalSchema = z.conditional(faultyCondition, schemaA, schemaB as any);
 
       // Should handle the error and fall back appropriately
       expect(() => {

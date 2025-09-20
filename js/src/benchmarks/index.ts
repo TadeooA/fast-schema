@@ -270,12 +270,8 @@ export class BenchmarkSuites {
       active: i % 2 === 0
     }));
 
-    const testData = {
-      individual: largeArray[0], // Single item for individual validation
-      batch: largeArray,         // Full array for batch validation
-      jitBatch: largeArray,
-      wasmBatch: largeArray
-    };
+    const singleItem = largeArray[0];
+    const testDataArray = [singleItem]; // Array containing single item for individual validation
 
     const results: BenchmarkResult[] = [];
 
@@ -283,7 +279,7 @@ export class BenchmarkSuites {
     results.push(await benchmark.benchmarkSchema(
       'individual',
       schemas.individual,
-      [testData.individual],
+      testDataArray,
       1000
     ));
 
@@ -295,9 +291,9 @@ export class BenchmarkSuites {
         name,
         () => {
           if ('validate' in schema) {
-            schema.validate(testData[name as keyof typeof testData]);
+            schema.validate(largeArray);
           } else {
-            schema.parse(testData[name as keyof typeof testData]);
+            schema.parse(largeArray);
           }
         },
         50 // Fewer iterations for array operations

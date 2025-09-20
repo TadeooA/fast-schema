@@ -1,5 +1,5 @@
 // Comprehensive test suite for intersection schemas
-import { z, ValidationError } from '../index';
+import { z, ValidationError, infer as Infer } from '../index';
 
 describe('Intersection Schema Tests', () => {
 
@@ -245,7 +245,7 @@ describe('Intersection Schema Tests', () => {
       const intersectionSchema = z.intersection(personSchema, employeeSchema);
 
       // TypeScript should infer the correct type
-      type IntersectionType = z.infer<typeof intersectionSchema>;
+      type IntersectionType = Infer<typeof intersectionSchema>;
 
       const data: IntersectionType = {
         name: 'John',

@@ -10,6 +10,8 @@ export const StringFormats = {
   mac: /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/,
 
   // Identifiers
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  uuid: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   jwt: /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/,
   base64: /^[A-Za-z0-9+/]*={0,2}$/,
   hex: /^[0-9a-fA-F]+$/,
@@ -144,6 +146,16 @@ export class AdvancedStringSchema extends Schema<string> {
 
   hex(): this {
     this.format = 'hex';
+    return this;
+  }
+
+  email(): this {
+    this.format = 'email';
+    return this;
+  }
+
+  uuid(): this {
+    this.format = 'uuid';
     return this;
   }
 

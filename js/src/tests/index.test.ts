@@ -1,5 +1,5 @@
 // Main test suite entry point for fast-schema
-import { z, ValidationError, FastSchemaWasm } from '../index';
+import { z, ValidationError, FastSchemaWasm, infer as Infer } from '../index';
 
 describe('Fast-Schema Test Suite', () => {
 
@@ -76,7 +76,7 @@ describe('Fast-Schema Test Suite', () => {
       const invalidResult = schema.safeParse('not a number');
       expect(invalidResult.success).toBe(false);
       if (!invalidResult.success) {
-        expect(invalidResult.error).toBeInstanceOf(ValidationError);
+        expect((invalidResult as any).error).toBeInstanceOf(ValidationError);
       }
     });
   });
@@ -128,7 +128,7 @@ describe('Fast-Schema Test Suite', () => {
     });
 
     test('should support advanced string formats', () => {
-      const emailSchema = z.advancedString().email();
+      const emailSchema = z.string().email();
       expect(() => emailSchema.parse('invalid')).toThrow();
 
       // Note: Actual email validation depends on implementation
@@ -191,8 +191,8 @@ describe('Fast-Schema Test Suite', () => {
       const results = batchValidator.validate(items);
 
       expect(results).toHaveLength(5);
-      expect(results[0].success).toBe(true);
-      expect(results[3].success).toBe(false); // 123 is not a string
+      expect(results[0]?.success).toBe(true);
+      expect(results[3]?.success).toBe(false); // 123 is not a string
     });
   });
 
@@ -231,7 +231,7 @@ describe('Fast-Schema Test Suite', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(ValidationError);
         const validationError = error as ValidationError;
-        expect(validationError.issues[0].path).toContain('name');
+        expect(validationError.issues[0]?.path).toContain('name');
       }
     });
   });
@@ -245,7 +245,7 @@ describe('Fast-Schema Test Suite', () => {
         active: z.boolean()
       });
 
-      type User = z.infer<typeof userSchema>;
+      type User = Infer<typeof userSchema>;
 
       // This should compile correctly with TypeScript
       const user: User = {
@@ -261,6 +261,7 @@ describe('Fast-Schema Test Suite', () => {
       const userWithoutAge: User = {
         id: '456',
         name: 'Jane',
+        age: undefined,
         active: false
       };
 

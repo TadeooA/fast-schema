@@ -20,8 +20,9 @@ import { NumberSchema } from './primitives/number';
 import { BooleanSchema, NullSchema, UndefinedSchema, AnySchema, UnknownSchema, NeverSchema } from './primitives/index';
 import { ArraySchema } from './complex/array';
 import { ObjectSchema } from './complex/object';
+import { RecordSchema } from './complex/record';
 import { IntersectionSchema } from './advanced/intersection';
-import { ConditionalSchema, conditional } from './advanced/conditional';
+import { conditional } from './advanced/conditional';
 import { AsyncSchema, PromiseSchema } from './advanced/async';
 import { AdvancedStringSchema } from './advanced/formats';
 import { JITSchema, BatchValidator } from './advanced/performance';
@@ -49,7 +50,10 @@ export class UnionSchema<T extends [Schema<any>, Schema<any>, ...Schema<any>[]]>
     // Try each option until one succeeds
     for (let i = 0; i < this.options.length; i++) {
       try {
-        return this.options[i]._validate(data);
+        const option = this.options[i];
+        if (option) {
+          return option._validate(data);
+        }
       } catch (error) {
         if (error instanceof ValidationError) {
           issues.push(...error.issues.map(issue => ({
@@ -125,6 +129,7 @@ export const z = {
   // Complex types
   array: <T>(schema: Schema<T>) => new ArraySchema(schema),
   object: <T extends Record<string, any>>(shape: { [K in keyof T]: Schema<T[K]> }) => new ObjectSchema(shape),
+  record: <T>(valueSchema: Schema<T>) => new RecordSchema(valueSchema),
 
   // Union and literal types
   union: <T extends [Schema<any>, Schema<any>, ...Schema<any>[]]>(schemas: T) => new UnionSchema(schemas),

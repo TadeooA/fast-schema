@@ -1,5 +1,5 @@
 // Comprehensive test suite for schema composition utilities
-import { z, ValidationError } from '../index';
+import { z, ValidationError, SchemaMerger, infer as Infer } from '../index';
 
 describe('Schema Composition Tests', () => {
 
@@ -267,7 +267,7 @@ describe('Schema Composition Tests', () => {
       const userKeySchema = z.keyof(userSchema);
 
       // TypeScript should infer 'id' | 'name' | 'age'
-      type UserKey = z.infer<typeof userKeySchema>;
+      type UserKey = Infer<typeof userKeySchema>;
 
       const validKey: UserKey = 'name';
       expect(userKeySchema.parse(validKey)).toBe('name');
@@ -276,7 +276,7 @@ describe('Schema Composition Tests', () => {
 
   describe('Schema Merger', () => {
     test('should merge two object schemas', () => {
-      if (z.advanced && z.advanced.SchemaMerger) {
+      if (SchemaMerger) {
         const schemaA = z.object({
           id: z.string(),
           name: z.string()
@@ -287,7 +287,7 @@ describe('Schema Composition Tests', () => {
           email: z.string()
         });
 
-        const mergedSchema = z.advanced.SchemaMerger.merge(schemaA, schemaB);
+        const mergedSchema = SchemaMerger.merge(schemaA, schemaB);
 
         const testData = {
           id: '123',
@@ -310,7 +310,7 @@ describe('Schema Composition Tests', () => {
     });
 
     test('should handle deep merging', () => {
-      if (z.advanced && z.advanced.SchemaMerger) {
+      if (SchemaMerger) {
         const schemaA = z.object({
           user: z.object({
             profile: z.object({
@@ -327,7 +327,7 @@ describe('Schema Composition Tests', () => {
           })
         });
 
-        const deepMergedSchema = z.advanced.SchemaMerger.deepMerge(schemaA, schemaB);
+        const deepMergedSchema = SchemaMerger.deepMerge(schemaA, schemaB);
 
         const testData = {
           user: {
@@ -525,7 +525,7 @@ describe('Schema Composition Tests', () => {
       const partialUserSchema = z.deepPartial(userWithProfileSchema);
 
       // TypeScript should infer correct types
-      type PartialUser = z.infer<typeof partialUserSchema>;
+      type PartialUser = Infer<typeof partialUserSchema>;
 
       const userData: PartialUser = {
         name: 'John',
