@@ -39,7 +39,8 @@ export class ObjectSchema<T extends Record<string, any>> extends Schema<T> {
           });
         }
       } catch (error) {
-        if (error instanceof ValidationError) {
+        // Check if error has ValidationError structure (instead of instanceof due to build issues)
+        if (error && typeof error === 'object' && Array.isArray(error.issues)) {
           error.issues.forEach(issue => {
             issues.push({
               ...issue,
