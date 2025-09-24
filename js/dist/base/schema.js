@@ -170,3 +170,4 @@ class TransformSchema extends Schema {
     }
 }
 exports.TransformSchema = TransformSchema;
+//# sourceMappingURL=schema.js.map

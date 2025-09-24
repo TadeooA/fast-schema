@@ -113,12 +113,58 @@ var Schema = /** @class */ (function () {
     return Schema;
 }());
 exports.Schema = Schema;
-// Optional schema wrapper
+
+// Helper function to copy methods from inner schema to wrapper
+function copyMethodsFromInnerSchema(wrapper, innerSchema, wrapperClass) {
+    var innerProto = Object.getPrototypeOf(innerSchema);
+    var ownMethods = Object.getOwnPropertyNames(innerProto);
+
+    for (var i = 0; i < ownMethods.length; i++) {
+        var methodName = ownMethods[i];
+        if (methodName !== 'constructor' &&
+            methodName !== '_validate' &&
+            typeof innerSchema[methodName] === 'function' &&
+            !wrapper.hasOwnProperty(methodName)) {
+
+            wrapper[methodName] = (function(methodName) {
+                return function() {
+                    var args = Array.prototype.slice.call(arguments);
+                    // Call the method on inner schema
+                    var result = innerSchema[methodName].apply(innerSchema, args);
+
+                    // If the result is the inner schema (for chaining), return wrapper instead
+                    if (result === innerSchema) {
+                        return wrapper;
+                    }
+
+                    // If the result is a new schema, wrap it with the same wrapper type
+                    if (result && typeof result._validate === 'function') {
+                        try {
+                            var constructorArgs = wrapper.__constructorArgs || [];
+                            return new (wrapperClass.bind.apply(wrapperClass, [null, result].concat(constructorArgs)))();
+                        } catch (e) {
+                            // Fallback: return the result as-is if we can't wrap it
+                            return result;
+                        }
+                    }
+
+                    // Otherwise return the result as-is
+                    return result;
+                };
+            })(methodName);
+        }
+    }
+}
+
+// Optional schema wrapper with method forwarding
 var OptionalSchema = /** @class */ (function (_super) {
     __extends(OptionalSchema, _super);
     function OptionalSchema(innerSchema) {
         var _this = _super.call(this, { type: 'optional', innerSchema: innerSchema.getSchema() }) || this;
         _this.innerSchema = innerSchema;
+        // Store constructor args for method forwarding
+        _this.__constructorArgs = [];
+        copyMethodsFromInnerSchema(_this, innerSchema, OptionalSchema);
         return _this;
     }
     OptionalSchema.prototype._validate = function (data) {
@@ -136,6 +182,9 @@ var NullableSchema = /** @class */ (function (_super) {
     function NullableSchema(innerSchema) {
         var _this = _super.call(this, { type: 'nullable', innerSchema: innerSchema.getSchema() }) || this;
         _this.innerSchema = innerSchema;
+        // Store constructor args for method forwarding
+        _this.__constructorArgs = [];
+        copyMethodsFromInnerSchema(_this, innerSchema, NullableSchema);
         return _this;
     }
     NullableSchema.prototype._validate = function (data) {
@@ -154,6 +203,9 @@ var DefaultSchema = /** @class */ (function (_super) {
         var _this = _super.call(this, { type: 'default', innerSchema: innerSchema.getSchema(), defaultValue: defaultValue }) || this;
         _this.innerSchema = innerSchema;
         _this.defaultValue = defaultValue;
+        // Store constructor args for method forwarding
+        _this.__constructorArgs = [defaultValue];
+        copyMethodsFromInnerSchema(_this, innerSchema, DefaultSchema);
         return _this;
     }
     DefaultSchema.prototype._validate = function (data) {
@@ -173,6 +225,9 @@ var RefinementSchema = /** @class */ (function (_super) {
         _this.innerSchema = innerSchema;
         _this.predicate = predicate;
         _this.errorMessage = errorMessage;
+        // Store constructor args for method forwarding
+        _this.__constructorArgs = [predicate, errorMessage];
+        copyMethodsFromInnerSchema(_this, innerSchema, RefinementSchema);
         return _this;
     }
     RefinementSchema.prototype._validate = function (data) {

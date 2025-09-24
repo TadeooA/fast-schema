@@ -26,3 +26,4 @@ export declare class StringSchema extends Schema<string> {
     endsWith(suffix: string): import("../base/schema").RefinementSchema<string>;
     includes(substring: string): import("../base/schema").RefinementSchema<string>;
 }
+//# sourceMappingURL=string.d.ts.map

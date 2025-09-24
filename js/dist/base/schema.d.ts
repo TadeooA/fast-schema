@@ -58,3 +58,4 @@ export declare class TransformSchema<T> extends Schema<T> {
     constructor(innerSchema: Schema<any>, transformer: (data: any) => T);
     _validate(data: unknown): T;
 }
+//# sourceMappingURL=schema.d.ts.map
