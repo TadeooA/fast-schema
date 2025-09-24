@@ -76,7 +76,7 @@ class HybridValidationEngine {
     }
     async checkWasmAvailability() {
         try {
-            const timeoutPromise = new Promise((_, reject) => {
+            const timeoutPromise = new Promise((_resolve, reject) => {
                 setTimeout(() => reject(new Error('WASM init timeout')), this.config.wasmInitTimeout);
             });
             const initPromise = this.initializeWasm();

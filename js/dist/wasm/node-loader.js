@@ -84,7 +84,8 @@ class NodeWasmLoader {
                     }
                 }
                 catch (error) {
-                    console.warn('❌ Failed to load real WASM bindings, using fallbacks:', error.message);
+                    const message = error instanceof Error ? error.message : 'Unknown error';
+                    console.warn('❌ Failed to load real WASM bindings, using fallbacks:', message);
                     imports = this.createFallbackImports();
                 }
             }
@@ -145,14 +146,14 @@ class NodeWasmLoader {
         return {
             './fast_schema_bg.js': {
                 __wbg_set_wasm: () => { },
-                __wbg_error_7534b8e9a36f1ab4: (ptr, len) => console.error('WASM Error (fallback)'),
-                __wbg_error_785f3cbbddee182e: (ptr, len) => console.error('WASM Error (fallback)'),
-                __wbg_log_7ff3e5f5d9bc8473: (ptr, len) => console.log('WASM Log (fallback)'),
+                __wbg_error_7534b8e9a36f1ab4: (_ptr, _len) => console.error('WASM Error (fallback)'),
+                __wbg_error_785f3cbbddee182e: (_ptr, _len) => console.error('WASM Error (fallback)'),
+                __wbg_log_7ff3e5f5d9bc8473: (_ptr, _len) => console.log('WASM Log (fallback)'),
                 __wbg_new_8a6f238a6ece86ea: () => ({}),
-                __wbg_stack_0ed75d68575b0f3c: (ptr, len) => '',
-                __wbg_warn_3db133942ab6822e: (ptr, len) => console.warn('WASM Warning (fallback)'),
-                __wbg_wbindgenthrow_4c11a24fca429ccf: (ptr, len) => { throw new Error('WASM throw (fallback)'); },
-                __wbindgen_cast_2241b6af4c4b2941: (arg0, arg1) => arg0,
+                __wbg_stack_0ed75d68575b0f3c: (_ptr, _len) => '',
+                __wbg_warn_3db133942ab6822e: (_ptr, _len) => console.warn('WASM Warning (fallback)'),
+                __wbg_wbindgenthrow_4c11a24fca429ccf: (_ptr, _len) => { throw new Error('WASM throw (fallback)'); },
+                __wbindgen_cast_2241b6af4c4b2941: (arg0, _arg1) => arg0,
                 __wbindgen_init_externref_table: () => { }
             },
             __wbindgen_placeholder__: {},

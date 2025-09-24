@@ -20,7 +20,7 @@ export interface WasmBindings {
 
 export class ESMWrapper {
   private static cache = new Map<string, WasmBindings>();
-  private static loadingPromises = new Map<string, Promise<WasmBindings>>();
+  private static loadingPromises = new Map<string, Promise<WasmBindings | null>>();
 
   /**
    * Load WASM bindings using dynamic import with proper error handling
@@ -102,12 +102,14 @@ export class ESMWrapper {
       console.error('💥 Internal binding load failed:', error);
 
       // Provide helpful error messages for common issues
-      if (error.message.includes('ENOENT')) {
-        console.error('📁 File not found. Check if the WASM package was built correctly.');
-      } else if (error.message.includes('SyntaxError')) {
-        console.error('📝 Syntax error in binding file. May need to rebuild WASM package.');
-      } else if (error.message.includes('ERR_MODULE_NOT_FOUND')) {
-        console.error('🔍 Module resolution failed. Check file path and permissions.');
+      if (error instanceof Error) {
+        if (error.message.includes('ENOENT')) {
+          console.error('📁 File not found. Check if the WASM package was built correctly.');
+        } else if (error.message.includes('SyntaxError')) {
+          console.error('📝 Syntax error in binding file. May need to rebuild WASM package.');
+        } else if (error.message.includes('ERR_MODULE_NOT_FOUND')) {
+          console.error('🔍 Module resolution failed. Check file path and permissions.');
+        }
       }
 
       return null;
@@ -125,20 +127,20 @@ export class ESMWrapper {
         // Use real binding functions if available, fallback to stubs
         __wbg_set_wasm: bindings.__wbg_set_wasm || (() => {}),
         __wbg_log_7ff3e5f5d9bc8473: bindings.__wbg_log_7ff3e5f5d9bc8473 ||
-          ((ptr: number, len: number) => console.log('WASM Log (fallback)')),
+          ((_ptr: number, _len: number) => console.log('WASM Log (fallback)')),
         __wbg_error_7534b8e9a36f1ab4: bindings.__wbg_error_7534b8e9a36f1ab4 ||
-          ((ptr: number, len: number) => console.error('WASM Error (fallback)')),
+          ((_ptr: number, _len: number) => console.error('WASM Error (fallback)')),
         __wbg_error_785f3cbbddee182e: bindings.__wbg_error_785f3cbbddee182e ||
-          ((ptr: number, len: number) => console.error('WASM Error (fallback)')),
+          ((_ptr: number, _len: number) => console.error('WASM Error (fallback)')),
         __wbg_new_8a6f238a6ece86ea: bindings.__wbg_new_8a6f238a6ece86ea || (() => ({})),
         __wbg_stack_0ed75d68575b0f3c: bindings.__wbg_stack_0ed75d68575b0f3c ||
-          ((ptr: number, len: number) => ''),
+          ((_ptr: number, _len: number) => ''),
         __wbg_warn_3db133942ab6822e: bindings.__wbg_warn_3db133942ab6822e ||
-          ((ptr: number, len: number) => console.warn('WASM Warning (fallback)')),
+          ((_ptr: number, _len: number) => console.warn('WASM Warning (fallback)')),
         __wbg_wbindgenthrow_4c11a24fca429ccf: bindings.__wbg_wbindgenthrow_4c11a24fca429ccf ||
-          ((ptr: number, len: number) => { throw new Error('WASM throw (fallback)'); }),
+          ((_ptr: number, _len: number) => { throw new Error('WASM throw (fallback)'); }),
         __wbindgen_cast_2241b6af4c4b2941: bindings.__wbindgen_cast_2241b6af4c4b2941 ||
-          ((arg0: any, arg1: any) => arg0),
+          ((arg0: any, _arg1: any) => arg0),
         __wbindgen_init_externref_table: bindings.__wbindgen_init_externref_table || (() => {}),
 
         // Include any additional functions found in the bindings

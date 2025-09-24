@@ -113,7 +113,7 @@ export class WasmSchemaAdapter<T> extends Schema<T> {
           // Create a mock WasmModule interface from the WASM instance
           return {
             FastValidator: class {
-              constructor(schema_json: string) {
+              constructor(_schema_json: string) {
                 // Implementation will use wasmInstance.exports
               }
               validate(data_json: string): string {
@@ -134,7 +134,7 @@ export class WasmSchemaAdapter<T> extends Schema<T> {
               get_memory_info(): string { return "{}"; }
             },
             FastBatchValidator: class {
-              constructor(schema_json: string, batch_size: number) {}
+              constructor(_schema_json: string, _batch_size: number) {}
               validate_dataset(data_array_json: string): string {
                 const dataArray = JSON.parse(data_array_json);
                 const results = dataArray.map((item: any) => ({ success: true, data: item }));
@@ -143,7 +143,7 @@ export class WasmSchemaAdapter<T> extends Schema<T> {
               get_batch_stats(): string { return "{}"; }
             },
             UltraFastValidator: class {
-              constructor(validator_type: string, config: string) {}
+              constructor(_validator_type: string, _config: string) {}
               validate_batch(values_json: string): string {
                 const values = JSON.parse(values_json);
                 return JSON.stringify({
@@ -154,9 +154,9 @@ export class WasmSchemaAdapter<T> extends Schema<T> {
               }
             },
             FastSchemaUtils: {
-              validate_schema: (schema_json: string) => JSON.stringify({ valid: true }),
+              validate_schema: (_schema_json: string) => JSON.stringify({ valid: true }),
               get_version: () => "1.0.0",
-              analyze_schema_performance: (schema_json: string) => "{}"
+              analyze_schema_performance: (_schema_json: string) => "{}"
             }
           } as WasmModule;
         }
@@ -228,7 +228,7 @@ export class WasmSchemaAdapter<T> extends Schema<T> {
     return wasmSchema;
   }
 
-  _validate(data: unknown): T {
+  override _validate(data: unknown): T {
     if (this.useWasm && this.wasmValidator) {
       try {
         return this.validateWithWasm(data);
@@ -263,7 +263,7 @@ export class WasmSchemaAdapter<T> extends Schema<T> {
   }
 
   // Override safeParse for WASM optimization
-  safeParse(data: unknown): SafeParseReturnType<unknown, T> {
+  override safeParse(data: unknown): SafeParseReturnType<unknown, T> {
     if (this.useWasm && this.wasmValidator) {
       try {
         const dataJson = JSON.stringify(data);
@@ -415,7 +415,7 @@ export class WasmBatchProcessor<T> {
         if (wasmInstance) {
           return {
             FastValidator: class {
-              constructor(schema_json: string) {}
+              constructor(_schema_json: string) {}
               validate(data_json: string): string {
                 return JSON.stringify({ success: true, data: JSON.parse(data_json) });
               }
@@ -433,7 +433,7 @@ export class WasmBatchProcessor<T> {
               get_memory_info(): string { return "{}"; }
             },
             FastBatchValidator: class {
-              constructor(schema_json: string, batch_size: number) {}
+              constructor(_schema_json: string, _batch_size: number) {}
               validate_dataset(data_array_json: string): string {
                 const dataArray = JSON.parse(data_array_json);
                 const results = dataArray.map((item: any) => ({ success: true, data: item }));
@@ -442,7 +442,7 @@ export class WasmBatchProcessor<T> {
               get_batch_stats(): string { return "{}"; }
             },
             UltraFastValidator: class {
-              constructor(validator_type: string, config: string) {}
+              constructor(_validator_type: string, _config: string) {}
               validate_batch(values_json: string): string {
                 const values = JSON.parse(values_json);
                 return JSON.stringify({
@@ -453,9 +453,9 @@ export class WasmBatchProcessor<T> {
               }
             },
             FastSchemaUtils: {
-              validate_schema: (schema_json: string) => JSON.stringify({ valid: true }),
+              validate_schema: (_schema_json: string) => JSON.stringify({ valid: true }),
               get_version: () => "1.0.0",
-              analyze_schema_performance: (schema_json: string) => "{}"
+              analyze_schema_performance: (_schema_json: string) => "{}"
             }
           } as WasmModule;
         }
@@ -572,7 +572,7 @@ export class WasmUltraFastValidator {
         if (wasmInstance) {
           return {
             FastValidator: class {
-              constructor(schema_json: string) {}
+              constructor(_schema_json: string) {}
               validate(data_json: string): string {
                 return JSON.stringify({ success: true, data: JSON.parse(data_json) });
               }
@@ -590,7 +590,7 @@ export class WasmUltraFastValidator {
               get_memory_info(): string { return "{}"; }
             },
             FastBatchValidator: class {
-              constructor(schema_json: string, batch_size: number) {}
+              constructor(_schema_json: string, _batch_size: number) {}
               validate_dataset(data_array_json: string): string {
                 const dataArray = JSON.parse(data_array_json);
                 const results = dataArray.map((item: any) => ({ success: true, data: item }));
@@ -599,7 +599,7 @@ export class WasmUltraFastValidator {
               get_batch_stats(): string { return "{}"; }
             },
             UltraFastValidator: class {
-              constructor(validator_type: string, config: string) {}
+              constructor(_validator_type: string, _config: string) {}
               validate_batch(values_json: string): string {
                 const values = JSON.parse(values_json);
                 return JSON.stringify({
@@ -610,9 +610,9 @@ export class WasmUltraFastValidator {
               }
             },
             FastSchemaUtils: {
-              validate_schema: (schema_json: string) => JSON.stringify({ valid: true }),
+              validate_schema: (_schema_json: string) => JSON.stringify({ valid: true }),
               get_version: () => "1.0.0",
-              analyze_schema_performance: (schema_json: string) => "{}"
+              analyze_schema_performance: (_schema_json: string) => "{}"
             }
           } as WasmModule;
         }

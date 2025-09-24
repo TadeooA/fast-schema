@@ -74,7 +74,7 @@ class WasmSchemaAdapter extends schema_1.Schema {
                     // Create a mock WasmModule interface from the WASM instance
                     return {
                         FastValidator: class {
-                            constructor(schema_json) {
+                            constructor(_schema_json) {
                                 // Implementation will use wasmInstance.exports
                             }
                             validate(data_json) {
@@ -95,7 +95,7 @@ class WasmSchemaAdapter extends schema_1.Schema {
                             get_memory_info() { return "{}"; }
                         },
                         FastBatchValidator: class {
-                            constructor(schema_json, batch_size) { }
+                            constructor(_schema_json, _batch_size) { }
                             validate_dataset(data_array_json) {
                                 const dataArray = JSON.parse(data_array_json);
                                 const results = dataArray.map((item) => ({ success: true, data: item }));
@@ -104,7 +104,7 @@ class WasmSchemaAdapter extends schema_1.Schema {
                             get_batch_stats() { return "{}"; }
                         },
                         UltraFastValidator: class {
-                            constructor(validator_type, config) { }
+                            constructor(_validator_type, _config) { }
                             validate_batch(values_json) {
                                 const values = JSON.parse(values_json);
                                 return JSON.stringify({
@@ -115,9 +115,9 @@ class WasmSchemaAdapter extends schema_1.Schema {
                             }
                         },
                         FastSchemaUtils: {
-                            validate_schema: (schema_json) => JSON.stringify({ valid: true }),
+                            validate_schema: (_schema_json) => JSON.stringify({ valid: true }),
                             get_version: () => "1.0.0",
-                            analyze_schema_performance: (schema_json) => "{}"
+                            analyze_schema_performance: (_schema_json) => "{}"
                         }
                     };
                 }
@@ -354,7 +354,7 @@ class WasmBatchProcessor {
                 if (wasmInstance) {
                     return {
                         FastValidator: class {
-                            constructor(schema_json) { }
+                            constructor(_schema_json) { }
                             validate(data_json) {
                                 return JSON.stringify({ success: true, data: JSON.parse(data_json) });
                             }
@@ -372,7 +372,7 @@ class WasmBatchProcessor {
                             get_memory_info() { return "{}"; }
                         },
                         FastBatchValidator: class {
-                            constructor(schema_json, batch_size) { }
+                            constructor(_schema_json, _batch_size) { }
                             validate_dataset(data_array_json) {
                                 const dataArray = JSON.parse(data_array_json);
                                 const results = dataArray.map((item) => ({ success: true, data: item }));
@@ -381,7 +381,7 @@ class WasmBatchProcessor {
                             get_batch_stats() { return "{}"; }
                         },
                         UltraFastValidator: class {
-                            constructor(validator_type, config) { }
+                            constructor(_validator_type, _config) { }
                             validate_batch(values_json) {
                                 const values = JSON.parse(values_json);
                                 return JSON.stringify({
@@ -392,9 +392,9 @@ class WasmBatchProcessor {
                             }
                         },
                         FastSchemaUtils: {
-                            validate_schema: (schema_json) => JSON.stringify({ valid: true }),
+                            validate_schema: (_schema_json) => JSON.stringify({ valid: true }),
                             get_version: () => "1.0.0",
-                            analyze_schema_performance: (schema_json) => "{}"
+                            analyze_schema_performance: (_schema_json) => "{}"
                         }
                     };
                 }
@@ -503,7 +503,7 @@ class WasmUltraFastValidator {
                 if (wasmInstance) {
                     return {
                         FastValidator: class {
-                            constructor(schema_json) { }
+                            constructor(_schema_json) { }
                             validate(data_json) {
                                 return JSON.stringify({ success: true, data: JSON.parse(data_json) });
                             }
@@ -521,7 +521,7 @@ class WasmUltraFastValidator {
                             get_memory_info() { return "{}"; }
                         },
                         FastBatchValidator: class {
-                            constructor(schema_json, batch_size) { }
+                            constructor(_schema_json, _batch_size) { }
                             validate_dataset(data_array_json) {
                                 const dataArray = JSON.parse(data_array_json);
                                 const results = dataArray.map((item) => ({ success: true, data: item }));
@@ -530,7 +530,7 @@ class WasmUltraFastValidator {
                             get_batch_stats() { return "{}"; }
                         },
                         UltraFastValidator: class {
-                            constructor(validator_type, config) { }
+                            constructor(_validator_type, _config) { }
                             validate_batch(values_json) {
                                 const values = JSON.parse(values_json);
                                 return JSON.stringify({
@@ -541,9 +541,9 @@ class WasmUltraFastValidator {
                             }
                         },
                         FastSchemaUtils: {
-                            validate_schema: (schema_json) => JSON.stringify({ valid: true }),
+                            validate_schema: (_schema_json) => JSON.stringify({ valid: true }),
                             get_version: () => "1.0.0",
-                            analyze_schema_performance: (schema_json) => "{}"
+                            analyze_schema_performance: (_schema_json) => "{}"
                         }
                     };
                 }

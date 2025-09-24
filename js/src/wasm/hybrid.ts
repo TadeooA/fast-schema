@@ -71,7 +71,7 @@ export class HybridValidationEngine {
 
   private async checkWasmAvailability(): Promise<void> {
     try {
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise((_resolve, reject) => {
         setTimeout(() => reject(new Error('WASM init timeout')), this.config.wasmInitTimeout);
       });
 
@@ -263,7 +263,7 @@ export class HybridSchema<T> extends Schema<T> {
     }
   }
 
-  _validate(data: unknown): T {
+  override _validate(data: unknown): T {
     const start = performance.now();
     const useWasm = this.shouldUseWasm(data);
 
@@ -294,7 +294,7 @@ export class HybridSchema<T> extends Schema<T> {
     }
   }
 
-  safeParse(data: unknown): SafeParseReturnType<unknown, T> {
+  override safeParse(data: unknown): SafeParseReturnType<unknown, T> {
     const start = performance.now();
     const useWasm = this.shouldUseWasm(data);
 

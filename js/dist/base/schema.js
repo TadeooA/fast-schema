@@ -87,11 +87,47 @@ class Schema {
     }
 }
 exports.Schema = Schema;
-// Optional schema wrapper
+// Helper function to copy methods from inner schema to wrapper
+function copyMethodsFromInnerSchema(wrapper, innerSchema, wrapperClass) {
+    const innerProto = Object.getPrototypeOf(innerSchema);
+    const ownMethods = Object.getOwnPropertyNames(innerProto);
+    for (const methodName of ownMethods) {
+        if (methodName !== 'constructor' &&
+            methodName !== '_validate' &&
+            typeof innerSchema[methodName] === 'function' &&
+            !wrapper.hasOwnProperty(methodName)) {
+            wrapper[methodName] = (...args) => {
+                // Call the method on inner schema
+                const result = innerSchema[methodName](...args);
+                // If the result is the inner schema (for chaining), return wrapper instead
+                if (result === innerSchema) {
+                    return wrapper;
+                }
+                // If the result is a new schema, we need to wrap it with the same wrapper type
+                if (result && typeof result._validate === 'function') {
+                    // This requires the wrapper constructor signature to match
+                    try {
+                        return new wrapperClass(result, ...wrapper.__constructorArgs || []);
+                    }
+                    catch (e) {
+                        // Fallback: return the result as-is if we can't wrap it
+                        return result;
+                    }
+                }
+                // Otherwise return the result as-is
+                return result;
+            };
+        }
+    }
+}
+// Optional schema wrapper with method forwarding
 class OptionalSchema extends Schema {
     constructor(innerSchema) {
         super({ type: 'optional', innerSchema: innerSchema.getSchema() });
         this.innerSchema = innerSchema;
+        // Store constructor args for method forwarding
+        this.__constructorArgs = [];
+        copyMethodsFromInnerSchema(this, innerSchema, OptionalSchema);
     }
     _validate(data) {
         if (data === undefined) {
@@ -101,11 +137,14 @@ class OptionalSchema extends Schema {
     }
 }
 exports.OptionalSchema = OptionalSchema;
-// Nullable schema wrapper
+// Nullable schema wrapper with method forwarding
 class NullableSchema extends Schema {
     constructor(innerSchema) {
         super({ type: 'nullable', innerSchema: innerSchema.getSchema() });
         this.innerSchema = innerSchema;
+        // Store constructor args for method forwarding
+        this.__constructorArgs = [];
+        copyMethodsFromInnerSchema(this, innerSchema, NullableSchema);
     }
     _validate(data) {
         if (data === null) {
@@ -115,12 +154,15 @@ class NullableSchema extends Schema {
     }
 }
 exports.NullableSchema = NullableSchema;
-// Default value schema
+// Default value schema with method forwarding
 class DefaultSchema extends Schema {
     constructor(innerSchema, defaultValue) {
         super({ type: 'default', innerSchema: innerSchema.getSchema(), defaultValue });
         this.innerSchema = innerSchema;
         this.defaultValue = defaultValue;
+        // Store constructor args for method forwarding
+        this.__constructorArgs = [defaultValue];
+        copyMethodsFromInnerSchema(this, innerSchema, DefaultSchema);
     }
     _validate(data) {
         if (data === undefined) {
@@ -130,13 +172,16 @@ class DefaultSchema extends Schema {
     }
 }
 exports.DefaultSchema = DefaultSchema;
-// Refinement schema
+// Refinement schema with method forwarding
 class RefinementSchema extends Schema {
     constructor(innerSchema, predicate, errorMessage) {
         super({ type: 'refinement', innerSchema: innerSchema.getSchema() });
         this.innerSchema = innerSchema;
         this.predicate = predicate;
         this.errorMessage = errorMessage;
+        // Store constructor args for method forwarding
+        this.__constructorArgs = [predicate, errorMessage];
+        copyMethodsFromInnerSchema(this, innerSchema, RefinementSchema);
     }
     _validate(data) {
         const validated = this.innerSchema._validate(data);

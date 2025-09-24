@@ -41,18 +41,27 @@ Fast-Schema provides a comprehensive validation API with ultra-performance:
 ```typescript
 import { fast } from '@tadeooa/fast-schema';
 
-const stringSchema = fast.string()
-  .email()                    // Email validation
-  .url()                      // URL validation
-  .uuid()                     // UUID v4 validation
+// Basic string validations with chaining
+const emailSchema = fast.string().email().min(5).max(100);
+const urlSchema = fast.string().url().nonempty();
+const uuidSchema = fast.string().uuid().trim();
+
+// Advanced string validations
+const complexStringSchema = fast.string()
   .min(5).max(100)           // Length constraints
-  .regex(/^[A-Z]+$/)         // Custom regex
-  .datetime()                // ISO datetime
-  .ip()                      // IPv4 validation
+  .regex(/^[A-Z]+$/)         // Custom regex pattern
   .trim()                    // Auto-trim whitespace
-  .startsWith("prefix")      // Prefix validation
-  .includes("substring")     // Contains validation
   .nonempty();               // Non-empty string
+
+// Content-based validations (use separately)
+const prefixSchema = fast.string().startsWith("prefix");
+const containsSchema = fast.string().includes("substring");
+const suffixSchema = fast.string().endsWith("suffix");
+
+// Format validations
+const formatSchema = fast.string()
+  .datetime()                // ISO datetime format
+  .ip();                     // IPv4 validation
 
 // All methods are chainable and ultra-fast
 ```
