@@ -1,0 +1,27 @@
+import { Schema } from '../base/schema';
+export declare class StringSchema extends Schema<string> {
+    private minLength?;
+    private maxLength?;
+    private pattern?;
+    private formats;
+    constructor();
+    _validate(data: unknown): string;
+    min(length: number): this;
+    max(length: number): this;
+    length(length: number): this;
+    email(): this;
+    url(): this;
+    uuid(): this;
+    regex(pattern: RegExp): this;
+    datetime(): this;
+    date(): this;
+    time(): this;
+    ip(): this;
+    trim(): import("../base/schema").TransformSchema<string>;
+    toLowerCase(): import("../base/schema").TransformSchema<string>;
+    toUpperCase(): import("../base/schema").TransformSchema<string>;
+    nonempty(): this;
+    startsWith(prefix: string): import("../base/schema").RefinementSchema<string>;
+    endsWith(suffix: string): import("../base/schema").RefinementSchema<string>;
+    includes(substring: string): import("../base/schema").RefinementSchema<string>;
+}

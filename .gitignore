@@ -14,8 +14,9 @@ yarn-error.log*
 package-lock.json
 yarn.lock
 
-# Build outputs
-dist/
+# Build outputs (keep dist/ for npm package)
+# dist/  -- commented out because we need dist/ files for npm package
+js/dist-esm/
 build/
 *.tsbuildinfo
 

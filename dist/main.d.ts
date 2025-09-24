@@ -1,0 +1,30 @@
+import { Schema, StringSchema, NumberSchema, BooleanSchema, ArraySchema, ObjectSchema, UnionSchema, IntersectionSchema, RefinementSchema, ValidationError, ValidationIssue, AsyncValidationOptions, AsyncRefinementFunction, AsyncRefinementConfig, AsyncCacheConfig, DebouncedAsyncFunction, ValidationDebounceManager, globalDebounceManager, createDebouncedValidator, debounceAsyncFunction, BatchValidator, BatchValidationItem, BatchValidationOptions, BatchValidationResult, BatchValidationStats, ValidationEventEmitter, ValidationMonitor, globalValidationMonitor, ValidationEvent, ValidationEventType, ValidationEventListener, ValidationStartEvent, ValidationSuccessEvent, ValidationErrorEvent, ValidationCacheEvent, AsyncValidationStartEvent, AsyncValidationCompleteEvent, BatchValidationStartEvent, BatchValidationCompleteEvent, BatchItemValidationEvent, PerformanceEvent, DebugEvent, RegexCache, SchemaCache, ValidationPool, PerformanceStats, JITConfig, ConditionalValidationRule, ValidationContext, CustomValidatorFunction, CustomValidatorConfig, ConditionalSchema, CustomValidationSchema, SchemaGenerator, DynamicSchema, SchemaMetadata, IntrospectableSchema, SerializedSchema, SchemaSerializer, SchemaMigration, VersionedSchema, ValidationErrorWithContext, ContextualValidator, createConditionalSchema, createCustomValidator, createDynamicSchema, introspect, createVersionedSchema } from './core';
+export { ValidationError, ValidationIssue, AsyncValidationOptions, AsyncRefinementFunction, AsyncRefinementConfig, AsyncCacheConfig, DebouncedAsyncFunction, ValidationDebounceManager, globalDebounceManager, createDebouncedValidator, debounceAsyncFunction, BatchValidator, BatchValidationItem, BatchValidationOptions, BatchValidationResult, BatchValidationStats, ValidationEventEmitter, ValidationMonitor, globalValidationMonitor, ValidationEvent, ValidationEventType, ValidationEventListener, ValidationStartEvent, ValidationSuccessEvent, ValidationErrorEvent, ValidationCacheEvent, AsyncValidationStartEvent, AsyncValidationCompleteEvent, BatchValidationStartEvent, BatchValidationCompleteEvent, BatchItemValidationEvent, PerformanceEvent, DebugEvent, RegexCache, SchemaCache, ValidationPool, PerformanceStats, JITConfig, ConditionalValidationRule, ValidationContext, CustomValidatorFunction, CustomValidatorConfig, ConditionalSchema, CustomValidationSchema, SchemaGenerator, DynamicSchema, SchemaMetadata, IntrospectableSchema, SerializedSchema, SchemaSerializer, SchemaMigration, VersionedSchema, ValidationErrorWithContext, ContextualValidator, createConditionalSchema, createCustomValidator, createDynamicSchema, introspect, createVersionedSchema };
+export type infer<T extends Schema<any>> = T['_output'];
+export type input<T extends Schema<any>> = T['_input'];
+export type output<T extends Schema<any>> = T['_output'];
+export declare const z: {
+    string: () => StringSchema;
+    number: () => NumberSchema;
+    boolean: () => BooleanSchema;
+    array: <T extends Schema<any>>(schema: T) => ArraySchema<T>;
+    object: <T extends Record<string, Schema<any>>>(shape: T) => ObjectSchema<T>;
+    union: <T extends [Schema<any>, Schema<any>, ...Schema<any>[]]>(schemas: T) => UnionSchema<T>;
+    intersection: <A extends Schema<any>, B extends Schema<any>>(left: A, right: B) => IntersectionSchema<A, B>;
+    literal: <T extends string | number | boolean>(value: T) => RefinementSchema<StringSchema>;
+    null: () => any;
+    _validate(data: unknown): null;
+};
+export { ValidationError as ZodError };
+export type ZodIssue = ValidationIssue;
+export type ZodIssueCode = string;
+export type ZodParsedType = string;
+export type ZodType<Output = any, Def = any, Input = Output> = Schema<Output, Input>;
+export type ZodTypeDef = any;
+export type ZodFirstPartyTypeKind = string;
+export type SchemaType<Output = any, Input = Output> = Schema<Output, Input>;
+export type SchemaError = ValidationError;
+export type SchemaIssue = ValidationIssue;
+export type IssueCode = string;
+export type ParsedType = string;
+//# sourceMappingURL=main.d.ts.map
