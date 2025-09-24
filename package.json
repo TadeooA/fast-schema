@@ -1,6 +1,6 @@
 {
   "name": "@tadeooa/fast-schema",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "The fastest TypeScript-first schema validation with static type inference - a drop-in replacement for Zod with 10-20x better performance",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
