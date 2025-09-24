@@ -3,11 +3,9 @@
   "version": "1.0.2",
   "description": "The fastest TypeScript-first schema validation with static type inference - a drop-in replacement for Zod with 10-20x better performance",
   "main": "dist/index.js",
-  "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.esm.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
@@ -21,7 +19,7 @@
   "scripts": {
     "build": "npm run build:wasm && npm run build:ts",
     "build:wasm": "wasm-pack build --target bundler --out-dir js/pkg",
-    "build:ts": "tsc && rollup -c",
+    "build:ts": "cd js && npm run build:ts && cp dist/index.* ../dist/ && cp dist/api.* ../dist/",
     "dev": "npm run build:wasm && tsc --watch",
     "test": "jest",
     "test:unit": "jest tests/unit",
