@@ -29,31 +29,47 @@ if (cjsModule.default) {
 }
 `;
 
-  // For now, create a simpler solution - copy the CommonJS file and add .mjs extension info
-  // This is a temporary solution until we can properly convert the entire build pipeline
-  const simpleEsmWrapper = `
-// ESM compatibility wrapper
-import createRequire from 'module';
-const require = createRequire(import.meta.url);
+  // Create a true ESM version by converting CommonJS exports
+  let esmContent = content;
 
-// Import the CommonJS version
-const cjsModule = require('./${path.basename(filePath)}');
+  // Remove "use strict"
+  esmContent = esmContent.replace(/["']use strict["'];?\r?\n?/g, '');
 
-// Re-export everything
-export const {
-  fast, ValidationError, Schema, normal, fastTier, ultra, select, recommend, recommendations,
-  StringSchema, NumberSchema, BooleanSchema, NullSchema, UndefinedSchema, AnySchema,
-  UnknownSchema, NeverSchema, ArraySchema, ObjectSchema, UnionSchema, LiteralSchema,
-  EnumSchema, OptionalSchema, NullableSchema, DefaultSchema, RefinementSchema,
-  TransformSchema, IntersectionSchema, ConditionalSchema, AsyncSchema, AsyncRefinementSchema,
-  PromiseSchema, AdvancedStringSchema, StringFormats, RegexCache, SchemaCache, ValidationPool,
-  JITSchema, BatchValidator, StreamingValidator, DeepPartialSchema, RequiredSchema,
-  ReadonlySchema, NonNullableSchema, KeyofSchema, SchemaMerger, DiscriminatedUnionSchema,
-  FastSchemaWasm, ZodError, z
-} = cjsModule;
+  // Convert CommonJS require() to import statements
+  esmContent = esmContent.replace(/const\s+(.+?)\s*=\s*require\(["'](.+?)["']\);?\r?\n?/g, (match, varName, modulePath) => {
+    // Handle destructuring imports
+    if (varName.includes('{') && varName.includes('}')) {
+      return `import ${varName} from "${modulePath}";\n`;
+    }
+    // Handle default imports
+    return `import ${varName} from "${modulePath}";\n`;
+  });
 
-export default cjsModule;
-`;
+  // Convert Object.defineProperty exports to direct exports
+  esmContent = esmContent.replace(/Object\.defineProperty\(exports,\s*["'](__esModule)["'],\s*\{\s*value:\s*true\s*\}\);?\r?\n?/g, '');
+
+  // Convert named exports
+  esmContent = esmContent.replace(/Object\.defineProperty\(exports,\s*["'](.+?)["'],\s*\{\s*enumerable:\s*true,\s*get:\s*function\s*\(\)\s*\{\s*return\s*(.+?);\s*\}\s*\}\);?\r?\n?/g,
+    'export const $1 = $2;\n');
+
+  // Convert direct exports assignment
+  esmContent = esmContent.replace(/exports\.(\w+)\s*=\s*(.+?);?\r?\n?/g, 'export const $1 = $2;\n');
+
+  // Convert module.exports
+  esmContent = esmContent.replace(/module\.exports\s*=\s*(.+?);?\r?\n?/g, 'export default $1;\n');
+
+  // Handle __exportStar calls
+  esmContent = esmContent.replace(/__exportStar\(require\(["'](.+?)["']\),\s*exports\);?\r?\n?/g, 'export * from "$1";\n');
+
+  // Remove remaining CommonJS boilerplate
+  esmContent = esmContent.replace(/var __createBinding[^;]+;?\r?\n?/g, '');
+  esmContent = esmContent.replace(/var __exportStar[^;]+;?\r?\n?/g, '');
+  esmContent = esmContent.replace(/var _a;?\r?\n?/g, '');
+
+  // Clean up extra newlines
+  esmContent = esmContent.replace(/\n\n+/g, '\n\n');
+
+  const simpleEsmWrapper = esmContent;
 
   // Ensure the output directory exists
   const outputDirPath = path.dirname(outputPath);

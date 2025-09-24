@@ -47,7 +47,13 @@ export class StringSchema extends Schema<string> {
       }]);
     }
 
-    return data;
+    // Apply string transformations (trim, toLowerCase, etc.)
+    let result = data;
+    for (const transform of this.transforms) {
+      result = transform(result);
+    }
+
+    return result;
   }
 
   // Length constraints
@@ -114,17 +120,22 @@ export class StringSchema extends Schema<string> {
     return this;
   }
 
-  // Common string operations
-  trim() {
-    return this.transform((s: string) => s.trim());
+  // Common string operations - Fixed to maintain method chaining
+  private transforms: Array<(s: string) => string> = [];
+
+  trim(): this {
+    this.transforms.push((s: string) => s.trim());
+    return this;
   }
 
-  toLowerCase() {
-    return this.transform((s: string) => s.toLowerCase());
+  toLowerCase(): this {
+    this.transforms.push((s: string) => s.toLowerCase());
+    return this;
   }
 
-  toUpperCase() {
-    return this.transform((s: string) => s.toUpperCase());
+  toUpperCase(): this {
+    this.transforms.push((s: string) => s.toUpperCase());
+    return this;
   }
 
   // Additional validations

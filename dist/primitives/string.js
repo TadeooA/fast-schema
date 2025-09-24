@@ -50,14 +50,24 @@ var StringSchema = /** @class */ (function (_super) {
                     message: "String must be at most ".concat(this.maxLength, " characters")
                 }]);
         }
-        if (this.pattern && !this.pattern.test(data)) {
+        // Apply string transformations (trim, toLowerCase, etc.) FIRST
+        var result = data;
+        if (this.transforms) {
+            for (var i = 0; i < this.transforms.length; i++) {
+                result = this.transforms[i](result);
+            }
+        }
+
+        // Then validate pattern on the transformed result
+        if (this.pattern && !this.pattern.test(result)) {
             throw new types_1.ValidationError([{
                     code: 'invalid_string',
                     path: [],
                     message: 'String does not match required pattern'
                 }]);
         }
-        return data;
+
+        return result;
     };
     // Length constraints
     StringSchema.prototype.min = function (length) {
@@ -112,15 +122,21 @@ var StringSchema = /** @class */ (function (_super) {
         this.formats.add('ip');
         return this;
     };
-    // Common string operations
+    // Common string operations - Fixed to maintain method chaining
     StringSchema.prototype.trim = function () {
-        return this.transform(function (s) { return s.trim(); });
+        if (!this.transforms) this.transforms = [];
+        this.transforms.push(function (s) { return s.trim(); });
+        return this;
     };
     StringSchema.prototype.toLowerCase = function () {
-        return this.transform(function (s) { return s.toLowerCase(); });
+        if (!this.transforms) this.transforms = [];
+        this.transforms.push(function (s) { return s.toLowerCase(); });
+        return this;
     };
     StringSchema.prototype.toUpperCase = function () {
-        return this.transform(function (s) { return s.toUpperCase(); });
+        if (!this.transforms) this.transforms = [];
+        this.transforms.push(function (s) { return s.toUpperCase(); });
+        return this;
     };
     // Additional validations
     StringSchema.prototype.nonempty = function () {

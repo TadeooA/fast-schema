@@ -1,0 +1,1 @@
+{"version":3,"file":"wasm-mock.d.ts","sourceRoot":"","sources":["../../../src/tests/__mocks__/wasm-mock.ts"],"names":[],"mappings":"AACA,eAAO,MAAM,cAAc;;qBAEH,MAAM;2BACX,MAAM;gCACD,MAAM;;;;;;;qBAON,MAAM,aAAa,MAAM;mCACtB,MAAM;;;;;mBAKX,MAAM,UAAU,MAAM;iCACnB,MAAM;;;;kCAID,MAAM;;6CAEK,MAAM;;CAE9C,CAAC;AAEF,eAAe,cAAc,CAAC"}

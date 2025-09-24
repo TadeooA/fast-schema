@@ -1,10 +1,9 @@
 
-// ESM compatibility wrapper
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+// ESM compatibility wrapper - Browser and Node.js compatible
+// Pure ESM re-export without Node.js-specific APIs
 
-// Import the CommonJS version
-const cjsModule = require('./index.js');
+// Import the CommonJS module as ES module
+import cjsModule from './index.js';
 
 // Re-export individual exports
 export const fast = cjsModule.fast;
