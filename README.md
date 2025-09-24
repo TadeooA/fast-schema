@@ -19,74 +19,98 @@ Fast-Schema delivers **10-100x performance** improvements over existing solution
 - **Consistent excellence**: Faster than all competitors
 
 ```typescript
-// Same familiar API, 11x the performance
+// Ultra-performance validation with clean API
+import { fast } from '@tadeooa/fast-schema';
+
 const schema = fast.object({
-  name: fast.string().email().min(5).max(100),
-  age: fast.number().min(0).max(120),
-  tags: fast.array(fast.string()).max(10)
+  name: fast.string(),
+  age: fast.number(),
+  tags: fast.array(fast.string())
 });
 
 // 9.6M validations/second vs Zod's 2.7M
 const result = schema.parse(data);
 ```
 
-## 🎯 Performance Tiers
+## 🎯 API Overview
 
-Choose your speed level based on your use case:
+Fast-Schema provides a comprehensive validation API with ultra-performance:
 
-### 🐌 **NORMAL** (1x baseline)
+### ⚡ **Core API** (Production Ready)
 ```typescript
-import { fast } from 'fast-schema';
+import { fast } from '@tadeooa/fast-schema';
 
-const schema = fast.performance.normal.object({
-  name: fast.performance.normal.string(),
-  age: fast.performance.normal.number()
+// Basic schemas
+const userSchema = fast.object({
+  id: fast.string(),
+  name: fast.string(),
+  age: fast.number(),
+  isActive: fast.boolean(),
+  tags: fast.array(fast.string())
+});
+
+// Parse and validate
+const result = userSchema.parse(userData);
+```
+
+### 🚀 **Advanced Features**
+```typescript
+import { fast } from '@tadeooa/fast-schema';
+
+// Unions and literals
+const roleSchema = fast.union([
+  fast.literal('admin'),
+  fast.literal('user'),
+  fast.literal('guest')
+]);
+
+// Enums
+const permissionSchema = fast.enum(['read', 'write', 'delete']);
+
+// Complex nested validation
+const apiSchema = fast.object({
+  user: fast.object({
+    role: roleSchema,
+    permissions: fast.array(permissionSchema)
+  }),
+  metadata: fast.record(fast.unknown())
 });
 ```
-- **Use case**: Prototyping, development, learning
-- **Performance**: Zod-compatible baseline
-- **Features**: Full error details, familiar API
 
-### ⚡ **FAST** (10x faster)
+### 🔧 **Utility Functions**
 ```typescript
-const schema = fast.performance.fast.object({
-  name: fast.performance.fast.string(),
-  age: fast.performance.fast.number()
+// Type coercion
+const coercedSchema = fast.coerce.string(); // Converts input to string
+const dateSchema = fast.coerce.date();      // Converts string to Date
+
+// Schema composition
+const partialUser = fast.deepPartial(userSchema);
+const readonlyUser = fast.readonly(userSchema);
+
+// Async validation
+const asyncSchema = fast.async(async (data) => {
+  // Custom async validation logic
+  return validatedData;
 });
 ```
-- **Use case**: Production applications, APIs
-- **Performance**: 5-15x faster with WASM acceleration
-- **Features**: Hybrid WASM optimization, smart caching
-
-### 🚀 **ULTRA** (100x faster)
-```typescript
-const schema = fast.performance.ultra.precompile(
-  fast.performance.ultra.object({
-    name: fast.performance.ultra.string(),
-    age: fast.performance.ultra.number()
-  })
-);
-```
-- **Use case**: High-throughput, real-time systems
-- **Performance**: 50-400x faster with pre-compiled validators
-- **Features**: Memory pooling, batch processing, zero overhead
 
 ## 🚧 Development Status
 
 **Fast-Schema is currently in active development.** The library demonstrates exceptional performance results and is being built in public.
 
-### Getting Started
+### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/TadeooA/fast-schema.git
-cd fast-schema
+# Install from GitHub Packages
+npm install @tadeooa/fast-schema
 
-# Install dependencies
-npm install
+# Or using yarn
+yarn add @tadeooa/fast-schema
+```
 
-# Build the project
-npm run build
+**Note:** This package is published to GitHub Packages. You may need to configure your `.npmrc`:
+```
+@tadeooa:registry=https://npm.pkg.github.com
 ```
 
 ## 🏃‍♂️ Quick Start
@@ -94,15 +118,15 @@ npm run build
 ### Basic Usage
 
 ```typescript
-import { fast } from './js/src/api';
+import { fast } from '@tadeooa/fast-schema';
 
 // Define your schema
 const userSchema = fast.object({
-  id: fast.string().uuid(),
-  name: fast.string().min(2).max(50),
-  email: fast.string().email(),
-  age: fast.number().int().min(18).max(120),
-  tags: fast.array(fast.string()).max(10),
+  id: fast.string(),
+  name: fast.string(),
+  email: fast.string(),
+  age: fast.number(),
+  tags: fast.array(fast.string()),
   isActive: fast.boolean(),
   metadata: fast.object({
     source: fast.string(),
@@ -111,7 +135,7 @@ const userSchema = fast.object({
 });
 
 // Type inference
-type User = typeof userSchema._output;
+type User = fast.infer<typeof userSchema>;
 
 // Validate data
 const userData = {
