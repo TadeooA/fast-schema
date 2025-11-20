@@ -1,4 +1,5 @@
-# Fast-Schema
+ # Fast-Schema
+ ![Imagen](src/fastApi.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
